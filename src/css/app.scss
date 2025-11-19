@@ -1,1 +1,293 @@
 // app global css in SCSS form
+
+// ===================================
+// Singula - Sistema de Control y Seguimiento de Indicadores SLA
+// Tata Consultancy Services
+// Estilos globales personalizados - Paleta corporativa profesional
+// ===================================
+
+// Variables personalizadas - Colores Tata (Negro y Blanco)
+$primary-color: #000000; // Negro principal
+$secondary-color: #2c2c2c; // Gris oscuro
+$accent-color: #4a4a4a; // Gris medio
+$dark-color: #000000; // Negro puro
+$light-gray: #e0e0e0; // Gris claro
+$lighter-gray: #f5f5f5; // Gris muy claro
+$white: #ffffff; // Blanco puro
+
+// Colores funcionales (sobrios)
+$positive-color: #2e7d32; // Verde sobrio para éxito
+$negative-color: #c62828; // Rojo sobrio para errores
+$info-color: #424242; // Gris para información
+$warning-color: #f57c00; // Naranja sobrio para advertencias
+
+// Estilos globales
+body {
+  font-family: 'Roboto', sans-serif;
+}
+
+// Páginas
+.q-page {
+  min-height: calc(100vh - 50px);
+}
+
+// Encabezados de páginas
+.page-header {
+  margin-bottom: 24px;
+
+  h4 {
+    margin: 0;
+    font-weight: 700;
+    color: $dark-color;
+  }
+
+  p {
+    margin: 8px 0 0 0;
+    color: #757575;
+  }
+}
+
+// Tarjetas (Cards)
+.q-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+  &:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  }
+}
+
+// KPI Cards - Estilos específicos
+.kpi-card {
+  height: 100%;
+
+  .text-h4 {
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+}
+
+// Chart Container
+.chart-container {
+  padding: 16px;
+  background-color: #ffffff;
+  border-radius: 8px;
+}
+
+// Botones
+.q-btn {
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0.5px;
+
+  &.q-btn--unelevated {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+}
+
+// Inputs y selects
+.q-field {
+  &.q-field--filled {
+    .q-field__control {
+      border-radius: 4px;
+
+      &:before {
+        border-bottom: none;
+      }
+    }
+  }
+}
+
+// Tablas
+.q-markup-table {
+  border-radius: 8px;
+  overflow: hidden;
+
+  thead {
+    tr {
+      th {
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+      }
+    }
+  }
+
+  tbody {
+    tr {
+      transition: background-color 0.2s;
+
+      &:hover {
+        background-color: rgba(0, 0, 0, 0.02);
+      }
+    }
+  }
+}
+
+// Badges
+.q-badge {
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+// Timeline
+.q-timeline {
+  &__entry {
+    padding-bottom: 16px;
+  }
+}
+
+// Notificaciones personalizadas
+.q-notification {
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+// Loader / Spinner
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+
+  .q-spinner {
+    margin: 0 auto;
+  }
+}
+
+// Empty state
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: #757575;
+
+  .q-icon {
+    font-size: 64px;
+    opacity: 0.3;
+    margin-bottom: 16px;
+  }
+
+  p {
+    margin: 8px 0 0 0;
+    font-size: 1rem;
+  }
+}
+
+// Scrollbar personalizado
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+
+  &:hover {
+    background: #555;
+  }
+}
+
+// Animaciones
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+// Utilidades
+.text-gradient {
+  background: linear-gradient(135deg, $primary-color 0%, $secondary-color 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.card-elevated {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.bordered-top {
+  border-top: 3px solid $primary-color;
+}
+
+.glass-effect {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid $light-gray;
+}
+
+// Estilo corporativo profesional
+.tata-card {
+  border: 1px solid $light-gray;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+
+  &:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    border-color: $primary-color;
+  }
+}
+
+.tata-header {
+  background: linear-gradient(to right, $primary-color, $secondary-color);
+  color: $white;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+// Responsive
+@media (max-width: 599px) {
+  .page-header {
+    h4 {
+      font-size: 1.5rem;
+    }
+  }
+
+  .kpi-card {
+    margin-bottom: 16px;
+  }
+}
+
+@media (min-width: 600px) and (max-width: 1023px) {
+  .chart-container {
+    padding: 12px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .chart-container {
+    padding: 24px;
+  }
+}
+
+// Dark mode support (opcional)
+body.body--dark {
+  .q-card {
+    background-color: #1e1e1e;
+  }
+
+  .chart-container {
+    background-color: #2a2a2a;
+  }
+
+  .empty-state {
+    color: #b0b0b0;
+  }
+}
