@@ -200,7 +200,7 @@
         </q-list>
       </q-card-section>
     </q-card>
-
+    <!-- Dialog para crear bloques faltantes -->
     <!-- Dialog para crear bloques faltantes -->
     <q-dialog v-model="showCreateAreaDialog" persistent>
       <q-card style="min-width: 500px">
