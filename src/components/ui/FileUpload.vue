@@ -317,7 +317,7 @@
 import { ref, computed } from 'vue'
 import { useQuasar } from 'quasar'
 import { useConfigStore } from 'src/stores/configStore'
-import * as XLSX from 'xlsx'
+import * as ExcelJS from 'exceljs'
 
 const $q = useQuasar()
 const configStore = useConfigStore()
@@ -444,12 +444,27 @@ async function readExcelFile(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
 
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
-        const data = new Uint8Array(e.target.result)
-        const workbook = XLSX.read(data, { type: 'array' })
-        const firstSheet = workbook.Sheets[workbook.SheetNames[0]]
-        const jsonData = XLSX.utils.sheet_to_json(firstSheet)
+        const buffer = e.target.result
+        const workbook = new ExcelJS.Workbook()
+        await workbook.xlsx.load(buffer)
+        const worksheet = workbook.getWorksheet(1)
+        const jsonData = []
+        const header = []
+        worksheet.getRow(1).eachCell((cell) => {
+          header.push(cell.value)
+        })
+
+        worksheet.eachRow((row, rowNumber) => {
+          if (rowNumber > 1) {
+            const rowData = {}
+            row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+              rowData[header[colNumber - 1]] = cell.value
+            })
+            jsonData.push(rowData)
+          }
+        })
         resolve(jsonData)
       } catch (err) {
         reject(new Error('Error al parsear el archivo Excel: ' + err.message))
@@ -533,38 +548,83 @@ function seleccionarAreaFaltante(area) {
   nuevaArea.value.nombre = area
 }
 
-function downloadTemplate() {
-  // Crear contenido CSV de ejemplo
-  const csvContent = [
-    'area,tipo_solicitud,prioridad,fecha_solicitud,nombre_personal',
-    'Backend,Nuevo Personal,Alta,2025-11-01,Juan Pérez',
-    'Frontend,Reemplazo,Media,2025-11-05,María García',
-    'QA,Nuevo Personal,Crítica,2025-11-10,Carlos López',
-    'Mobile,Nuevo Personal,Baja,2025-11-15,Ana Martínez',
-    'DevOps,Reemplazo,Alta,2025-11-18,Luis Rodríguez',
-    'Data,Nuevo Personal,Media,2025-11-20,Sofia González',
-  ].join('\n')
+async function downloadTemplate() {
+  try {
+    const workbook = new ExcelJS.Workbook()
+    const worksheet = workbook.addWorksheet('Plantilla')
 
-  // Crear blob y descargar
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-  const link = document.createElement('a')
-  const url = URL.createObjectURL(blob)
+    // Definir columnas
+    worksheet.columns = [
+      { header: 'bloque_tech', key: 'bloque_tech', width: 15 },
+      { header: 'tipo_solicitud', key: 'tipo_solicitud', width: 20 },
+      { header: 'prioridad', key: 'prioridad', width: 15 },
+      { header: 'fecha_solicitud', key: 'fecha_solicitud', width: 20 },
+      { header: 'nombre_personal', key: 'nombre_personal', width: 25 },
+    ]
 
-  link.setAttribute('href', url)
-  link.setAttribute('download', 'plantilla_sla_singula.csv')
-  link.style.visibility = 'hidden'
+    // Agregar datos de ejemplo
+    const templateData = [
+      {
+        bloque_tech: 'Backend',
+        tipo_solicitud: 'Nuevo Personal',
+        prioridad: 'Alta',
+        fecha_solicitud: '2025-11-01',
+        nombre_personal: 'Juan Pérez',
+      },
+      {
+        bloque_tech: 'Frontend',
+        tipo_solicitud: 'Reemplazo',
+        prioridad: 'Media',
+        fecha_solicitud: '2025-11-05',
+        nombre_personal: 'María García',
+      },
+    ]
 
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
+    worksheet.addRows(templateData)
 
-  $q.notify({
-    type: 'info',
-    message: 'Plantilla descargada',
-    caption: 'Puedes usar este archivo como ejemplo',
-    icon: 'download',
-    position: 'top',
-  })
+    // Estilizar encabezado
+    worksheet.getRow(1).eachCell((cell) => {
+      cell.font = { bold: true }
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFDDDDDD' },
+      }
+    })
+
+    // Generar buffer y descargar
+    const buffer = await workbook.xlsx.writeBuffer()
+    const blob = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+
+    link.setAttribute('href', url)
+    link.setAttribute('download', 'plantilla_sla_singula.xlsx')
+    link.style.visibility = 'hidden'
+
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
+    $q.notify({
+      type: 'info',
+      message: 'Plantilla descargada',
+      caption: 'Puedes usar este archivo como ejemplo',
+      icon: 'download',
+      position: 'top',
+    })
+  } catch (error) {
+    console.error('Error al generar la plantilla:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Error al generar la plantilla',
+      caption: error.message,
+      icon: 'error',
+      position: 'top',
+    })
+  }
 }
 
 const uploadResultClass = computed(() => {
