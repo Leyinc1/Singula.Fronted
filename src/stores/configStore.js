@@ -5,161 +5,32 @@
  */
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { configService } from 'src/services/configService'
 
 export const useConfigStore = defineStore('config', () => {
   // ============================================
   // CONFIGURACIÓN DE BLOQUES TECNOLÓGICOS
   // ============================================
-  const bloques = ref([
-    {
-      id: 'backend',
-      nombre: 'Backend',
-      descripcion: 'Desarrollo de servicios y APIs',
-      departamento: 'Tech',
-      color: '#0066cc',
-      icon: 'dns',
-      activo: true,
-    },
-    {
-      id: 'frontend',
-      nombre: 'Frontend',
-      descripcion: 'Desarrollo de interfaces de usuario',
-      departamento: 'Tech',
-      color: '#ff6600',
-      icon: 'web',
-      activo: true,
-    },
-    {
-      id: 'qa',
-      nombre: 'QA',
-      descripcion: 'Aseguramiento de calidad y testing',
-      departamento: 'Tech',
-      color: '#4caf50',
-      icon: 'bug_report',
-      activo: true,
-    },
-    {
-      id: 'mobile',
-      nombre: 'Mobile',
-      descripcion: 'Desarrollo de aplicaciones móviles',
-      departamento: 'Tech',
-      color: '#9c27b0',
-      icon: 'smartphone',
-      activo: true,
-    },
-    {
-      id: 'devops',
-      nombre: 'DevOps',
-      descripcion: 'Infraestructura y despliegue',
-      departamento: 'Tech',
-      color: '#ff9800',
-      icon: 'cloud',
-      activo: true,
-    },
-    {
-      id: 'data',
-      nombre: 'Data',
-      descripcion: 'Ciencia de datos y análisis',
-      departamento: 'Tech',
-      color: '#00bcd4',
-      icon: 'analytics',
-      activo: true,
-    },
-  ])
+  // Los bloques se cargan desde el backend
+  const bloques = ref([])
 
   // ============================================
   // CONFIGURACIÓN DE PRIORIDADES
   // ============================================
-  const prioridades = ref([
-    {
-      id: 'critica',
-      nombre: 'Crítica',
-      descripcion: 'Requiere atención inmediata',
-      color: '#d32f2f',
-      icon: 'emergency',
-      nivel: 4,
-      slaMultiplier: 0.5, // Reduce el SLA a la mitad
-    },
-    {
-      id: 'alta',
-      nombre: 'Alta',
-      descripcion: 'Alta prioridad',
-      color: '#f57c00',
-      icon: 'priority_high',
-      nivel: 3,
-      slaMultiplier: 0.75,
-    },
-    {
-      id: 'media',
-      nombre: 'Media',
-      descripcion: 'Prioridad normal',
-      color: '#1976d2',
-      icon: 'remove',
-      nivel: 2,
-      slaMultiplier: 1.0,
-    },
-    {
-      id: 'baja',
-      nombre: 'Baja',
-      descripcion: 'Puede esperar',
-      color: '#388e3c',
-      icon: 'arrow_downward',
-      nivel: 1,
-      slaMultiplier: 1.5, // Aumenta el SLA en 50%
-    },
-  ])
+  // Las prioridades se obtienen desde el backend (datos reales de solicitudes)
+  const prioridades = ref([])
 
   // ============================================
   // CONFIGURACIÓN DE TIPOS DE SOLICITUD
   // ============================================
-  const tiposSolicitud = ref([
-    {
-      id: 'nuevo_personal',
-      nombre: 'Nuevo Personal',
-      descripcion: 'Contratación de nuevo personal',
-      sla: 35, // días
-      icon: 'person_add',
-      color: '#1976d2',
-    },
-    {
-      id: 'reemplazo',
-      nombre: 'Reemplazo',
-      descripcion: 'Reemplazo de personal existente',
-      sla: 20, // días
-      icon: 'swap_horiz',
-      color: '#388e3c',
-    },
-  ])
+  // Los tipos de solicitud se cargan desde el backend
+  const tiposSolicitud = ref([])
 
   // ============================================
   // CONFIGURACIÓN DE ESTADOS
   // ============================================
-  const estados = ref([
-    {
-      id: 'pendiente',
-      nombre: 'Pendiente',
-      color: '#9e9e9e',
-      icon: 'schedule',
-    },
-    {
-      id: 'en_proceso',
-      nombre: 'En Proceso',
-      color: '#2196f3',
-      icon: 'autorenew',
-    },
-    {
-      id: 'completado',
-      nombre: 'Completado',
-      color: '#4caf50',
-      icon: 'check_circle',
-    },
-    {
-      id: 'rechazado',
-      nombre: 'Rechazado',
-      color: '#f44336',
-      icon: 'cancel',
-    },
-  ])
+  // Los estados se obtienen desde el backend (datos reales)
+  const estados = ref([])
 
   // ============================================
   // COMPUTADOS
@@ -199,20 +70,24 @@ export const useConfigStore = defineStore('config', () => {
   )
 
   const prioridadesOptions = computed(() =>
-    prioridades.value.map((p) => ({
-      label: p.nombre,
-      value: p.nombre,
-      icon: p.icon,
-      color: p.color,
-    })),
+    prioridades.value
+      .filter(p => p.activo)
+      .map((p) => ({
+        label: p.nombre,
+        value: p.nombre,
+        icon: p.icon,
+        color: p.color,
+      })),
   )
 
   const tiposSolicitudOptions = computed(() =>
-    tiposSolicitud.value.map((t) => ({
-      label: t.nombre,
-      value: t.nombre,
-      icon: t.icon,
-    })),
+    tiposSolicitud.value
+      .filter(t => t.activo)
+      .map((t) => ({
+        label: t.nombre,
+        value: t.nombre,
+        icon: t.icon,
+      })),
   )
 
   const estadosOptions = computed(() =>
@@ -299,12 +174,540 @@ export const useConfigStore = defineStore('config', () => {
     return Math.round(slaBase * multiplier)
   }
 
+  // ============================================
+  // NOTA: Todos los datos ahora provienen del backend
+  // No hay datos mockeados ni hardcodeados
+  // ============================================
+
+  // ============================================
+  // INTEGRACIÓN CON BACKEND - ÁREAS/BLOQUES
+  // ============================================
+
+  const loading = ref(false)
+  const areasBackend = ref([])
+
+  /**
+   * Cargar áreas/bloques desde el backend
+   */
+  async function loadAreasFromBackend() {
+    loading.value = true
+    try {
+      const response = await configService.getAllAreas()
+      areasBackend.value = response.data
+
+      // Sincronizar con bloques locales
+      if (response.data && response.data.length > 0) {
+        response.data.forEach(area => {
+          // Buscar por backendId en lugar de nombre para manejar cambios de nombre
+          const existing = bloques.value.find(b => b.backendId === area.idArea)
+          if (!existing) {
+            // Crear nuevo bloque si no existe
+            bloques.value.push({
+              id: area.idArea,
+              nombre: area.nombreArea,
+              descripcion: area.descripcion || `Área ${area.nombreArea}`,
+              departamento: 'Tech',
+              color: '#' + Math.floor(Math.random()*16777215).toString(16),
+              icon: 'business',
+              activo: area.activo !== undefined ? area.activo : true,
+              backendId: area.idArea
+            })
+          } else {
+            // Actualizar TODOS los datos del bloque existente
+            existing.nombre = area.nombreArea // ⬅️ IMPORTANTE: actualizar el nombre
+            existing.descripcion = area.descripcion || existing.descripcion
+            existing.activo = area.activo !== undefined ? area.activo : true
+            existing.backendId = area.idArea
+            existing.id = area.idArea
+          }
+        })
+      }
+    } catch (error) {
+      console.error('Error cargando áreas desde backend:', error)
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * Crear área/bloque en el backend
+   */
+  async function createAreaBackend(bloqueData) {
+    loading.value = true
+    try {
+      const areaDto = {
+        NombreArea: bloqueData.nombre,
+        Descripcion: bloqueData.descripcion || ''
+      }
+      const response = await configService.createArea(areaDto)
+
+      // Agregar a bloques locales con backendId
+      bloques.value.push({
+        ...bloqueData,
+        id: response.data.idArea,
+        backendId: response.data.idArea,
+        activo: true
+      })
+
+      return response.data
+    } catch (error) {
+      console.error('Error creando área en backend:', error)
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * Actualizar área/bloque en el backend
+   */
+  async function updateAreaBackend(bloqueId, bloqueData) {
+    loading.value = true
+    try {
+      const bloque = bloques.value.find(b => b.id === bloqueId || b.backendId === bloqueId)
+      const backendId = bloque?.backendId || bloqueId
+
+      const areaDto = {
+        NombreArea: bloqueData.NombreArea || bloqueData.nombre || bloque?.nombre || '',
+        Descripcion: bloqueData.Descripcion || bloqueData.descripcion || bloque?.descripcion || '',
+        Activo: bloqueData.Activo !== undefined ? bloqueData.Activo : (bloque?.activo !== undefined ? bloque.activo : true)
+      }
+
+      const response = await configService.updateArea(backendId, areaDto)
+
+      // Recargar áreas para sincronizar estado
+      await loadAreasFromBackend()
+
+      return response.data
+    } catch (error) {
+      console.error('Error actualizando área en backend:', error)
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * Eliminar área/bloque del backend
+   */
+  async function deleteAreaBackend(bloqueId) {
+    loading.value = true
+    try {
+      const bloque = bloques.value.find(b => b.id === bloqueId || b.backendId === bloqueId)
+      const backendId = bloque?.backendId || bloqueId
+
+      await configService.deleteArea(backendId)
+
+      // Eliminar de bloques locales
+      const index = bloques.value.findIndex(b => b.id === bloqueId || b.backendId === bloqueId)
+      if (index !== -1) {
+        bloques.value.splice(index, 1)
+      }
+    } catch (error) {
+      console.error('Error eliminando área del backend:', error)
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
+  // ============================================
+  // INTEGRACIÓN CON BACKEND - TIPOS DE SOLICITUD
+  // ============================================
+
+  const tiposSolicitudBackend = ref([])
+
+  /**
+   * Cargar tipos de solicitud desde el backend
+   */
+  async function loadTiposSolicitudFromBackend() {
+    loading.value = true
+    try {
+      const response = await configService.getAllTiposSolicitud()
+      tiposSolicitudBackend.value = response.data
+
+      console.log('🔍 [loadTiposSolicitudFromBackend] Datos del backend:', response.data)
+
+      // Sincronizar con tipos locales
+      if (response.data && response.data.length > 0) {
+        // Crear un nuevo array para forzar reactividad de Vue
+        const nuevosTipos = response.data.map(tipo => ({
+          id: tipo.idTipoSolicitud,
+          nombre: tipo.descripcion,
+          descripcion: tipo.descripcion || '',
+          sla: 30, // El backend no tiene diasSla, usar valor por defecto
+          icon: getIconForTipo(tipo.descripcion),
+          color: getColorForTipo(tipo.descripcion),
+          activo: tipo.activo !== undefined ? tipo.activo : true,
+          backendId: tipo.idTipoSolicitud
+        }))
+
+        // Reemplazar el array completo para asegurar reactividad
+        tiposSolicitud.value = nuevosTipos
+
+        console.log('✅ [loadTiposSolicitudFromBackend] tiposSolicitud después del map:', tiposSolicitud.value)
+        console.log('📊 [loadTiposSolicitudFromBackend] Total tipos (incluyendo inactivos):', tiposSolicitud.value.length)
+        console.log('📊 [loadTiposSolicitudFromBackend] Tipos activos:', tiposSolicitud.value.filter(t => t.activo).length)
+        console.log('📊 [loadTiposSolicitudFromBackend] Tipos inactivos:', tiposSolicitud.value.filter(t => !t.activo).length)
+      }
+    } catch (error) {
+      console.error('Error cargando tipos de solicitud desde backend:', error)
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * Asignar icono basado en el tipo de solicitud
+   */
+  function getIconForTipo(descripcion) {
+    const iconMap = {
+      'Nuevo Personal': 'person_add',
+      'Reemplazo': 'swap_horiz',
+      'Transferencia': 'transfer_within_a_station',
+      'Promoción': 'trending_up'
+    }
+    return iconMap[descripcion] || 'assignment'
+  }
+
+  /**
+   * Asignar color basado en el tipo de solicitud
+   */
+  function getColorForTipo(descripcion) {
+    const colorMap = {
+      'Nuevo Personal': '#1976d2',
+      'Reemplazo': '#388e3c',
+      'Transferencia': '#f57c00',
+      'Promoción': '#9c27b0'
+    }
+    return colorMap[descripcion] || '#607d8b'
+  }
+
+  /**
+   * Crear tipo de solicitud en el backend
+   */
+  async function createTipoSolicitudBackend(tipoData) {
+    loading.value = true
+    try {
+      const tipoDto = {
+        codigo: tipoData.nombre.toUpperCase().replace(/\s+/g, '_'),
+        descripcion: tipoData.nombre
+      }
+      const response = await configService.createTipoSolicitud(tipoDto)
+
+      // Agregar a tipos locales
+      tiposSolicitud.value.push({
+        id: response.data.idTipoSolicitud,
+        nombre: response.data.descripcion,
+        descripcion: response.data.descripcion || '',
+        sla: tipoData.sla || 30,
+        icon: tipoData.icon || 'assignment',
+        color: tipoData.color || '#000000',
+        activo: true,
+        backendId: response.data.idTipoSolicitud
+      })
+
+      return response.data
+    } catch (error) {
+      console.error('Error creando tipo de solicitud en backend:', error)
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * Actualizar tipo de solicitud en el backend
+   */
+  async function updateTipoSolicitudBackend(tipoId, tipoData) {
+    loading.value = true
+    try {
+      const tipo = tiposSolicitud.value.find(t => t.id === tipoId || t.backendId === tipoId)
+      const backendId = tipo?.backendId || tipoId
+
+      const tipoDto = {
+        Codigo: tipoData.Codigo || tipoData.nombre?.toUpperCase().replace(/\s+/g, '_') || tipo?.nombre.toUpperCase().replace(/\s+/g, '_'),
+        Descripcion: tipoData.Descripcion || tipoData.nombre || tipo?.nombre,
+        Activo: tipoData.Activo !== undefined ? tipoData.Activo : (tipo?.activo !== undefined ? tipo.activo : true)
+      }
+
+      const response = await configService.updateTipoSolicitud(backendId, tipoDto)
+
+      // Recargar tipos de solicitud para sincronizar
+      await loadTiposSolicitudFromBackend()
+
+      return response.data
+    } catch (error) {
+      console.error('Error actualizando tipo de solicitud en backend:', error)
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * Eliminar tipo de solicitud del backend
+   */
+  async function deleteTipoSolicitudBackend(tipoId) {
+    loading.value = true
+    try {
+      const tipo = tiposSolicitud.value.find(t => t.id === tipoId || t.backendId === tipoId)
+      const backendId = tipo?.backendId || tipoId
+
+      await configService.deleteTipoSolicitud(backendId)
+
+      // Recargar tipos de solicitud para sincronizar
+      await loadTiposSolicitudFromBackend()
+    } catch (error) {
+      console.error('Error eliminando tipo de solicitud del backend:', error)
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
+  // ============================================
+  // INTEGRACIÓN CON BACKEND - CONFIG SLA
+  // ============================================
+
+  const configSlaList = ref([])
+
+  /**
+   * Cargar configuraciones SLA desde el backend
+   */
+  async function loadConfigSlaFromBackend() {
+    loading.value = true
+    try {
+      const response = await configService.getAllConfigSla()
+      // Filtrar solo las configuraciones activas
+      configSlaList.value = response.data.filter(config => config.esActivo !== false)
+      return configSlaList.value
+    } catch (error) {
+      console.error('Error cargando configuraciones SLA desde backend:', error)
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * Crear configuración SLA en el backend
+   */
+  async function createConfigSlaBackend(configData) {
+    loading.value = true
+    try {
+      const configDto = {
+        CodigoSla: configData.codigoSla,
+        Descripcion: configData.descripcion,
+        IdTipoSolicitud: configData.idTipoSolicitud,
+        DiasUmbral: configData.diasUmbral,
+        EsActivo: configData.esActivo !== undefined ? configData.esActivo : true
+      }
+      await configService.createConfigSla(configDto)
+
+      // Recargar configuraciones SLA para sincronizar
+      await loadConfigSlaFromBackend()
+    } catch (error) {
+      console.error('Error creando configuración SLA en backend:', error)
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * Actualizar configuración SLA en el backend
+   */
+  async function updateConfigSlaBackend(id, configData) {
+    loading.value = true
+    try {
+      const configDto = {
+        CodigoSla: configData.codigoSla,
+        Descripcion: configData.descripcion,
+        IdTipoSolicitud: configData.idTipoSolicitud,
+        DiasUmbral: configData.diasUmbral,
+        EsActivo: configData.esActivo
+      }
+      await configService.updateConfigSla(id, configDto)
+
+      // Recargar configuraciones SLA para sincronizar
+      await loadConfigSlaFromBackend()
+    } catch (error) {
+      console.error('Error actualizando configuración SLA en backend:', error)
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * Eliminar configuración SLA del backend
+   */
+  async function deleteConfigSlaBackend(id) {
+    loading.value = true
+    try {
+      await configService.deleteConfigSla(id)
+
+      // Recargar configuraciones SLA para sincronizar
+      await loadConfigSlaFromBackend()
+    } catch (error) {
+      console.error('Error eliminando configuración SLA del backend:', error)
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
+  // ============================================
+  // INTEGRACIÓN CON BACKEND - PRIORIDADES
+  // ============================================
+
+  const prioridadesBackend = ref([])
+
+  /**
+   * Cargar prioridades desde el backend
+   */
+  async function loadPrioridadesFromBackend() {
+    loading.value = true
+    try {
+      const response = await configService.getAllPrioridades()
+      prioridadesBackend.value = response.data
+
+      console.log('🔍 [loadPrioridadesFromBackend] Datos del backend:', response.data)
+
+      // Sincronizar con prioridades locales
+      if (response.data && response.data.length > 0) {
+        // Crear un nuevo array para forzar reactividad de Vue
+        const nuevasPrioridades = response.data.map(prioridad => {
+          // Usar la descripción del backend directamente (ej: "Crítica", "Alta", "Media", "Baja")
+          // Esto asegura que coincida exactamente con los datos de las solicitudes
+          const nombreCorto = prioridad.descripcion
+
+          return {
+            id: prioridad.idPrioridad,
+            nombre: nombreCorto, // Usar descripción del backend para matching exacto con datos
+            codigo: prioridad.codigo,
+            descripcion: prioridad.descripcion || '',
+            nivel: prioridad.nivel,
+            slaMultiplier: prioridad.slaMultiplier,
+            icon: prioridad.icon || 'label',
+            color: prioridad.color || '#607d8b',
+            activo: prioridad.activo !== undefined ? prioridad.activo : true,
+            backendId: prioridad.idPrioridad
+          }
+        })
+
+        // Reemplazar el array completo para asegurar reactividad
+        prioridades.value = nuevasPrioridades
+
+        console.log('✅ [loadPrioridadesFromBackend] prioridades después del map:', prioridades.value)
+        console.log('📊 [loadPrioridadesFromBackend] Total prioridades (incluyendo inactivas):', prioridades.value.length)
+        console.log('📊 [loadPrioridadesFromBackend] Prioridades activas:', prioridades.value.filter(p => p.activo).length)
+        console.log('📊 [loadPrioridadesFromBackend] Prioridades inactivas:', prioridades.value.filter(p => !p.activo).length)
+      }
+    } catch (error) {
+      console.error('Error cargando prioridades desde backend:', error)
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * Crear prioridad en el backend
+   */
+  async function createPrioridadBackend(prioridadData) {
+    loading.value = true
+    try {
+      const prioridadDto = {
+        Codigo: prioridadData.codigo || prioridadData.nombre.toUpperCase().replace(/\s+/g, '_'),
+        Descripcion: prioridadData.nombre || prioridadData.descripcion,
+        Nivel: prioridadData.nivel,
+        SlaMultiplier: prioridadData.slaMultiplier,
+        Icon: prioridadData.icon || 'label',
+        Color: prioridadData.color || '#607d8b'
+      }
+      const response = await configService.createPrioridad(prioridadDto)
+
+      // Recargar prioridades para sincronizar
+      await loadPrioridadesFromBackend()
+
+      return response.data
+    } catch (error) {
+      console.error('Error creando prioridad en backend:', error)
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * Actualizar prioridad en el backend
+   */
+  async function updatePrioridadBackend(prioridadId, prioridadData) {
+    loading.value = true
+    try {
+      const prioridad = prioridades.value.find(p => p.id === prioridadId || p.backendId === prioridadId)
+      const backendId = prioridad?.backendId || prioridadId
+
+      const prioridadDto = {
+        Codigo: prioridadData.Codigo || prioridadData.codigo || prioridad?.codigo,
+        Descripcion: prioridadData.Descripcion || prioridadData.nombre || prioridad?.descripcion,
+        Nivel: prioridadData.Nivel !== undefined ? prioridadData.Nivel : prioridadData.nivel,
+        SlaMultiplier: prioridadData.SlaMultiplier !== undefined ? prioridadData.SlaMultiplier : prioridadData.slaMultiplier,
+        Icon: prioridadData.Icon || prioridadData.icon || prioridad?.icon || 'label',
+        Color: prioridadData.Color || prioridadData.color || prioridad?.color || '#607d8b',
+        Activo: prioridadData.Activo !== undefined ? prioridadData.Activo : (prioridad?.activo !== undefined ? prioridad.activo : true)
+      }
+
+      const response = await configService.updatePrioridad(backendId, prioridadDto)
+
+      // Recargar prioridades para sincronizar estado
+      await loadPrioridadesFromBackend()
+
+      return response.data
+    } catch (error) {
+      console.error('Error actualizando prioridad en backend:', error)
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * Eliminar prioridad del backend
+   */
+  async function deletePrioridadBackend(prioridadId) {
+    loading.value = true
+    try {
+      const prioridad = prioridades.value.find(p => p.id === prioridadId || p.backendId === prioridadId)
+      const backendId = prioridad?.backendId || prioridadId
+
+      await configService.deletePrioridad(backendId)
+
+      // Recargar prioridades para sincronizar
+      await loadPrioridadesFromBackend()
+    } catch (error) {
+      console.error('Error eliminando prioridad del backend:', error)
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     // Estado
     bloques,
     prioridades,
     tiposSolicitud,
     estados,
+    loading,
+    areasBackend,
+    tiposSolicitudBackend,
+    configSlaList,
+    prioridadesBackend,
 
     // Computados
     departamentos,
@@ -327,6 +730,30 @@ export const useConfigStore = defineStore('config', () => {
     toggleBloqueActivo,
     agregarPrioridad,
     agregarTipoSolicitud,
+
+    // Integración Backend - Áreas/Bloques
+    loadAreasFromBackend,
+    createAreaBackend,
+    updateAreaBackend,
+    deleteAreaBackend,
+
+    // Integración Backend - Tipos de Solicitud
+    loadTiposSolicitudFromBackend,
+    createTipoSolicitudBackend,
+    updateTipoSolicitudBackend,
+    deleteTipoSolicitudBackend,
+
+    // Integración Backend - Config SLA
+    loadConfigSlaFromBackend,
+    createConfigSlaBackend,
+    updateConfigSlaBackend,
+    deleteConfigSlaBackend,
+
+    // Integración Backend - Prioridades
+    loadPrioridadesFromBackend,
+    createPrioridadBackend,
+    updatePrioridadBackend,
+    deletePrioridadBackend,
 
     // Utilidades
     calcularSLA,

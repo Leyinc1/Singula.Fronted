@@ -5,6 +5,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { slaService } from 'src/services/slaService'
+import { useConfigStore } from './configStore'
 
 export const useSlaStore = defineStore('sla', () => {
   // Estado reactivo
@@ -17,9 +18,9 @@ export const useSlaStore = defineStore('sla', () => {
   const filters = ref({
     startDate: null,
     endDate: null,
-    bloqueTech: null,
-    tipoSolicitud: null,
-    prioridad: null,
+    bloqueTech: [], // Array para selección múltiple
+    tipoSolicitud: [], // Array para selección múltiple
+    prioridad: [], // Array para selección múltiple
     cumpleSla: null,
   })
 
@@ -30,38 +31,38 @@ export const useSlaStore = defineStore('sla', () => {
     // Filtro por fecha de inicio
     if (filters.value.startDate) {
       data = data.filter(
-        (record) => new Date(record.fecha_solicitud) >= new Date(filters.value.startDate),
+        (record) => new Date(record.fechaSolicitud) >= new Date(filters.value.startDate),
       )
     }
 
     // Filtro por fecha de fin
     if (filters.value.endDate) {
       data = data.filter(
-        (record) => new Date(record.fecha_solicitud) <= new Date(filters.value.endDate),
+        (record) => new Date(record.fechaSolicitud) <= new Date(filters.value.endDate),
       )
     }
 
-    // Filtro por BLOQUE TECH
-    if (filters.value.bloqueTech) {
-      data = data.filter((record) => record.bloque_tech === filters.value.bloqueTech)
+    // Filtro por BLOQUE TECH (múltiple)
+    if (filters.value.bloqueTech && filters.value.bloqueTech.length > 0) {
+      data = data.filter((record) => filters.value.bloqueTech.includes(record.bloqueTech))
     }
 
-    // Filtro por tipo de solicitud
-    if (filters.value.tipoSolicitud) {
-      data = data.filter((record) => record.tipo_solicitud === filters.value.tipoSolicitud)
+    // Filtro por tipo de solicitud (múltiple)
+    if (filters.value.tipoSolicitud && filters.value.tipoSolicitud.length > 0) {
+      data = data.filter((record) => filters.value.tipoSolicitud.includes(record.tipoSolicitud))
     }
 
-    // Filtro por prioridad
-    if (filters.value.prioridad) {
-      data = data.filter((record) => record.prioridad === filters.value.prioridad)
+    // Filtro por prioridad (múltiple)
+    if (filters.value.prioridad && filters.value.prioridad.length > 0) {
+      data = data.filter((record) => filters.value.prioridad.includes(record.prioridad))
     }
 
     // Filtro por cumplimiento SLA
     if (filters.value.cumpleSla) {
       data = data.filter((record) => {
         const cumple =
-          (record.tipo_solicitud === 'Nuevo Personal' && record.cumple_sla1 === true) ||
-          (record.tipo_solicitud === 'Reemplazo' && record.cumple_sla2 === true)
+          (record.tipoSolicitud === 'Nuevo Personal' && record.cumpleSla1 === true) ||
+          (record.tipoSolicitud === 'Reemplazo' && record.cumpleSla2 === true)
 
         if (filters.value.cumpleSla === 'cumple') {
           return cumple
@@ -80,9 +81,9 @@ export const useSlaStore = defineStore('sla', () => {
     if (!filteredData.value || filteredData.value.length === 0) return 0
 
     const sla1Records = filteredData.value.filter(
-      (record) => record.tipo_solicitud === 'Nuevo Personal',
+      (record) => record.tipoSolicitud === 'Nuevo Personal',
     )
-    const cumplidos = sla1Records.filter((record) => record.cumple_sla1).length
+    const cumplidos = sla1Records.filter((record) => record.cumpleSla1 || record.cumpleSla).length
 
     return sla1Records.length > 0 ? ((cumplidos / sla1Records.length) * 100).toFixed(2) : 0
   })
@@ -90,10 +91,54 @@ export const useSlaStore = defineStore('sla', () => {
   const kpiSla2 = computed(() => {
     if (!filteredData.value || filteredData.value.length === 0) return 0
 
-    const sla2Records = filteredData.value.filter((record) => record.tipo_solicitud === 'Reemplazo')
-    const cumplidos = sla2Records.filter((record) => record.cumple_sla2).length
+    const sla2Records = filteredData.value.filter((record) => record.tipoSolicitud === 'Reemplazo')
+    const cumplidos = sla2Records.filter((record) => record.cumpleSla2 || record.cumpleSla).length
 
     return sla2Records.length > 0 ? ((cumplidos / sla2Records.length) * 100).toFixed(2) : 0
+  })
+
+  // KPIs dinámicos por tipo de solicitud
+  const kpisPorTipo = computed(() => {
+    if (!filteredData.value || filteredData.value.length === 0) return {}
+
+    const configStore = useConfigStore()
+    const tiposActivos = configStore.tiposSolicitud
+      .filter(t => t.activo)
+      .map(t => t.nombre)
+
+    const kpis = {}
+
+    // Agrupar por tipo de solicitud, solo tipos activos
+    filteredData.value.forEach((record) => {
+      const tipo = record.tipoSolicitud
+      if (!tipo) return
+
+      // Filtrar solo tipos activos
+      if (!tiposActivos.includes(tipo)) {
+        return
+      }
+
+      if (!kpis[tipo]) {
+        kpis[tipo] = {
+          total: 0,
+          cumplidos: 0,
+          diasUmbral: record.diasUmbralSla || 0
+        }
+      }
+
+      kpis[tipo].total++
+      if (record.cumpleSla || record.cumpleSla1 || record.cumpleSla2) {
+        kpis[tipo].cumplidos++
+      }
+    })
+
+    // Calcular porcentajes
+    Object.keys(kpis).forEach(tipo => {
+      const kpi = kpis[tipo]
+      kpi.porcentaje = kpi.total > 0 ? ((kpi.cumplidos / kpi.total) * 100).toFixed(2) : 0
+    })
+
+    return kpis
   })
 
   // KPI de Eficacia: Total de solicitudes que cumplieron SLA / Total de solicitudes
@@ -102,10 +147,14 @@ export const useSlaStore = defineStore('sla', () => {
 
     const totalSolicitudes = filteredData.value.length
     const cumplidas = filteredData.value.filter((record) => {
-      if (record.tipo_solicitud === 'Nuevo Personal') {
-        return record.cumple_sla1 === true
-      } else if (record.tipo_solicitud === 'Reemplazo') {
-        return record.cumple_sla2 === true
+      // Usar el campo genérico cumpleSla si está disponible, sino usar la lógica legacy
+      if (record.cumpleSla !== undefined) {
+        return record.cumpleSla === true
+      }
+      if (record.tipoSolicitud === 'Nuevo Personal') {
+        return record.cumpleSla1 === true
+      } else if (record.tipoSolicitud === 'Reemplazo') {
+        return record.cumpleSla2 === true
       }
       return false
     }).length
@@ -117,37 +166,81 @@ export const useSlaStore = defineStore('sla', () => {
   const chartDataByRole = computed(() => {
     if (!filteredData.value || filteredData.value.length === 0) return []
 
-    const grouped = {}
+    const configStore = useConfigStore()
+    const bloquesActivos = configStore.bloques
+      .filter(b => b.activo)
+      .map(b => b.nombre)
 
+    const tiposActivos = configStore.tiposSolicitud
+      .filter(t => t.activo)
+      .map(t => t.nombre)
+
+    const grouped = {}
+    const tiposSolicitud = new Set()
+
+    // Primera pasada: identificar todos los tipos de solicitud y crear estructura
+    // Solo incluir registros de bloques activos Y tipos activos
     filteredData.value.forEach((record) => {
-      const role = record.bloque_tech || 'Sin Especificar'
+      const role = record.bloqueTech || 'Sin Especificar'
+      const tipo = record.tipoSolicitud
+
+      // Filtrar solo bloques activos
+      if (role !== 'Sin Especificar' && !bloquesActivos.includes(role)) {
+        return
+      }
+
+      // Filtrar solo tipos activos
+      if (!tipo || !tiposActivos.includes(tipo)) {
+        return
+      }
+
+      if (tipo) tiposSolicitud.add(tipo)
 
       if (!grouped[role]) {
         grouped[role] = {
           role,
-          totalSla1: 0,
-          cumplidosSla1: 0,
-          totalSla2: 0,
-          cumplidosSla2: 0,
+          porTipo: {}
         }
       }
 
-      if (record.tipo_solicitud === 'Nuevo Personal') {
-        grouped[role].totalSla1++
-        if (record.cumple_sla1) grouped[role].cumplidosSla1++
-      } else if (record.tipo_solicitud === 'Reemplazo') {
-        grouped[role].totalSla2++
-        if (record.cumple_sla2) grouped[role].cumplidosSla2++
+      if (!grouped[role].porTipo[tipo]) {
+        grouped[role].porTipo[tipo] = {
+          total: 0,
+          cumplidos: 0
+        }
+      }
+
+      grouped[role].porTipo[tipo].total++
+      if (record.cumpleSla || record.cumpleSla1 || record.cumpleSla2) {
+        grouped[role].porTipo[tipo].cumplidos++
       }
     })
 
-    return Object.values(grouped).map((item) => ({
-      role: item.role,
-      sla1Percentage:
-        item.totalSla1 > 0 ? ((item.cumplidosSla1 / item.totalSla1) * 100).toFixed(2) : 0,
-      sla2Percentage:
-        item.totalSla2 > 0 ? ((item.cumplidosSla2 / item.totalSla2) * 100).toFixed(2) : 0,
-    }))
+    // Segunda pasada: calcular porcentajes, solo para tipos activos
+    return Object.values(grouped).map((item) => {
+      const result = { role: item.role }
+
+      Object.keys(item.porTipo).forEach(tipo => {
+        // Verificar que el tipo esté activo
+        if (!tiposActivos.includes(tipo)) {
+          return
+        }
+
+        const data = item.porTipo[tipo]
+        const percentage = data.total > 0 ? ((data.cumplidos / data.total) * 100).toFixed(2) : 0
+        result[tipo] = percentage
+      })
+
+      // Mantener compatibilidad legacy solo si los tipos están activos
+      if (tiposActivos.includes('Nuevo Personal')) {
+        result.sla1Percentage = result['Nuevo Personal'] || 0
+      }
+      if (tiposActivos.includes('Reemplazo')) {
+        result.sla2Percentage = result['Reemplazo'] || 0
+      }
+
+      return result
+    })
   })
 
   // Acciones
@@ -219,9 +312,9 @@ export const useSlaStore = defineStore('sla', () => {
     filters.value = {
       startDate: null,
       endDate: null,
-      bloqueTech: null,
-      tipoSolicitud: null,
-      prioridad: null,
+      bloqueTech: [],
+      tipoSolicitud: [],
+      prioridad: [],
       cumpleSla: null,
     }
   }
@@ -236,6 +329,7 @@ export const useSlaStore = defineStore('sla', () => {
     // Computados
     kpiSla1,
     kpiSla2,
+    kpisPorTipo,
     kpiEficacia,
     chartDataByRole,
     filteredData,

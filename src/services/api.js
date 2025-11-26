@@ -6,7 +6,7 @@ import axios from 'axios'
 import { useAuthStore } from 'src/stores/authStore'
 
 // URL base del backend - ajustar según el entorno
-const API_BASE_URL = process.env.VUE_APP_API_URL || 'http://localhost:8000/api'
+const API_BASE_URL = process.env.VUE_APP_API_URL || 'http://localhost:5000/api'
 
 // Crear instancia de axios
 const apiClient = axios.create({
@@ -47,7 +47,12 @@ apiClient.interceptors.response.use(
           // Token expirado o inválido
           const authStore = useAuthStore()
           authStore.logout()
-          window.location.href = '/#/login'
+
+          // Solo redirigir si no estamos ya en páginas públicas
+          const currentPath = window.location.hash
+          if (!currentPath.includes('/login') && !currentPath.includes('/config')) {
+            window.location.href = '/#/login'
+          }
           break
         }
         case 403:
