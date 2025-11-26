@@ -124,11 +124,11 @@ async function handleLogin() {
     // Simular delay de red
     await new Promise((resolve) => setTimeout(resolve, 800))
 
-    // Nota: En esta versión mock, cualquier usuario/contraseña es válido
-    // En producción, esto validará contra el backend
+    // Llamar al backend para autenticar
     await authStore.login({
       username: loginForm.value.username,
-      email: loginForm.value.username + '@tcs.com',
+      password: loginForm.value.password,
+      rememberMe: loginForm.value.rememberMe,
     })
 
     $q.notify({

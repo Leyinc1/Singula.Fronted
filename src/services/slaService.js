@@ -4,85 +4,7 @@
  */
 import apiClient from './api'
 
-// ============================================
-// GENERADOR DE DATOS MOCK ESCALABLE
-// ============================================
-function generateMockData() {
-  const bloques = ['Backend', 'Frontend', 'QA', 'Mobile', 'DevOps', 'Data']
-
-  const prioridades = ['Crítica', 'Alta', 'Media', 'Baja']
-  const tiposSolicitud = ['Nuevo Personal', 'Reemplazo']
-  const nombres = [
-    'Juan Pérez',
-    'María García',
-    'Carlos López',
-    'Ana Martínez',
-    'Pedro Sánchez',
-    'Laura Rodríguez',
-    'Roberto González',
-    'Sofia Hernández',
-    'Diego Ramírez',
-    'Valentina Torres',
-    'Camila Vargas',
-    'Andrés Morales',
-    'Isabella Cruz',
-    'Santiago Ruiz',
-    'Lucía Fernández',
-    'Mateo Jiménez',
-    'Martina Castro',
-    'Sebastián Ortiz',
-    'Valeria Romero',
-    'Daniel Navarro',
-    'Emma Silva',
-    'Lucas Medina',
-    'Mia Herrera',
-    'Gabriel Vega',
-    'Victoria Ramos',
-  ]
-
-  const mockData = []
-  let id = 1
-
-  // Generar 70 registros (5 por cada uno de los 14 bloques)
-  for (let i = 0; i < 70; i++) {
-    const bloqueAleatorio = bloques[Math.floor(Math.random() * bloques.length)]
-    const tipoSolicitud = tiposSolicitud[Math.floor(Math.random() * tiposSolicitud.length)]
-    const prioridad = prioridades[Math.floor(Math.random() * prioridades.length)]
-    const nombreAleatorio = nombres[Math.floor(Math.random() * nombres.length)]
-
-    // Generar fechas aleatorias en los últimos 4 meses
-    const fechaSolicitud = new Date(
-      2025,
-      Math.floor(Math.random() * 4),
-      Math.floor(Math.random() * 28) + 1,
-    )
-    const diasTranscurridos = Math.floor(Math.random() * 50) + 5
-    const fechaIngreso = new Date(fechaSolicitud)
-    fechaIngreso.setDate(fechaIngreso.getDate() + diasTranscurridos)
-
-    // Determinar cumplimiento de SLA basado en tipo y días
-    const sla1 = 35 // Nuevo Personal
-    const sla2 = 20 // Reemplazo
-
-    const cumple_sla1 = tipoSolicitud === 'Nuevo Personal' ? diasTranscurridos <= sla1 : null
-    const cumple_sla2 = tipoSolicitud === 'Reemplazo' ? diasTranscurridos <= sla2 : null
-
-    mockData.push({
-      id: id++,
-      bloque_tech: bloqueAleatorio, // Bloque tecnológico: "Backend", "Frontend", "QA", etc.
-      tipo_solicitud: tipoSolicitud,
-      prioridad: prioridad,
-      fecha_solicitud: fechaSolicitud.toISOString().split('T')[0],
-      fecha_ingreso: fechaIngreso.toISOString().split('T')[0],
-      dias_transcurridos: diasTranscurridos,
-      cumple_sla1: cumple_sla1,
-      cumple_sla2: cumple_sla2,
-      nombre_personal: nombreAleatorio,
-    })
-  }
-
-  return mockData
-}
+// Nota: se removió el generador de datos mock para evitar uso accidental en producción.
 
 export const slaService = {
   /**
@@ -94,20 +16,26 @@ export const slaService = {
     try {
       const params = {}
 
-      if (filters.startDate) params.start_date = filters.startDate
-      if (filters.endDate) params.end_date = filters.endDate
-      if (filters.bloqueTech) params.bloque_tech = filters.bloqueTech
-      if (filters.tipoSolicitud) params.tipo_solicitud = filters.tipoSolicitud
+      // El backend (DashboardController) espera parámetros en camelCase: startDate, endDate, tipoSolicitud, prioridad, cumpleSla
+      // NOTA: bloqueTech se filtra localmente en el store (no se envía al backend) para permitir selección múltiple
+      if (filters.startDate) params.startDate = filters.startDate
+      if (filters.endDate) params.endDate = filters.endDate
+      // NO enviar bloqueTech al backend - se filtra localmente
+      // if (filters.bloqueTech) params.bloqueTech = filters.bloqueTech
+      if (filters.tipoSolicitud) params.tipoSolicitud = filters.tipoSolicitud
+      if (filters.prioridad) params.prioridad = filters.prioridad
+      if (typeof filters.cumpleSla !== 'undefined' && filters.cumpleSla !== null) {
+        // cumples: 'cumple' => true, 'no_cumple' => false
+        if (filters.cumpleSla === 'cumple') params.cumpleSla = true
+        else if (filters.cumpleSla === 'no_cumple') params.cumpleSla = false
+      }
 
-      const response = await apiClient.get('/sla/data', { params })
+      const response = await apiClient.get('/dashboard/sla/data', { params })
       return response.data
     } catch (error) {
-      console.error('Error al obtener datos SLA:', error)
-
-      // Retornar datos mock en caso de error (para desarrollo)
-      return {
-        data: generateMockData(),
-      }
+      console.error('Error al obtener datos SLA del servidor:', error)
+      // NO usar datos mock: lanzar el error para que el usuario lo vea
+      throw new Error(`No se pudieron cargar los datos de la base de datos: ${error.message}. Por favor, verifica que el servidor está en ejecución.`)
     }
   },
 
