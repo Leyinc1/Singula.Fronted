@@ -58,27 +58,27 @@
             <!-- Fecha Inicio -->
             <div class="col-12 col-md-4">
               <q-input
-                v-model="reportFilters.startDate"
+                v-model="tempFilters.startDate"
                 filled
                 type="date"
                 label="Fecha Inicio"
                 stack-label
                 bg-color="white"
-                :max="reportFilters.endDate || maxFechaFin"
+                :max="tempFilters.endDate || maxFechaFin"
               >
                 <template v-slot:prepend>
                   <q-icon name="event" color="primary" />
                 </template>
               </q-input>
               <div class="text-caption text-grey-7 q-mt-xs">
-                Máximo: {{ reportFilters.endDate ? formatDate(reportFilters.endDate) : formatDate(maxFechaFin) }}
+                Máximo: {{ tempFilters.endDate ? formatDate(tempFilters.endDate) : formatDate(maxFechaFin) }}
               </div>
             </div>
 
             <!-- Fecha Fin -->
             <div class="col-12 col-md-4">
               <q-input
-                v-model="reportFilters.endDate"
+                v-model="tempFilters.endDate"
                 filled
                 type="date"
                 label="Fecha Fin"
@@ -424,31 +424,24 @@
 
           <!-- Botones de exportación -->
           <div class="row items-center q-gutter-sm justify-center">
-                <div>
-                  <PdfExportButton
-                    :data="filteredChartDataByRoleWithResources"
-                    :kpi-data="allKpisForPdf"
-                    :incumplimientos-data="incumplimientosDataForPdf"
-                    :title="reportTitle"
-                    :filename="generateFilename()"
-                    button-label="Generar Reporte PDF"
-                    button-color="primary"
-                    :disabled="filteredChartDataByRole.length === 0"
-                    tooltip="Generar, guardar y descargar reporte PDF"
-                    class="q-mb-sm"
-                    :upload="true"
-                    :saveMetadata="true"
-                    :filtros="reportFilters"
-                    :generatedBy="generatedBy"
-                    @pdf-uploaded="(ruta) => { $q.notify({ type: 'positive', message: 'PDF generado y guardado exitosamente' }) }"
-                    @pdf-error="(err) => { $q.notify({ type: 'negative', message: 'Error al generar PDF' }); console.error(err) }"
-                  />
-                </div>
+            <PdfExportButton
+              :data="filteredChartDataByRoleWithResources"
+              :kpi-data="allKpisForPdf"
+              :incumplimientos-data="incumplimientosDataForPdf"
+              :title="reportTitle"
+              :sla-code="reportSlaCode"
+              :filename="generateFilename()"
+              button-label="Generar Reporte PDF"
+              button-color="primary"
+              :disabled="filteredChartDataByRole.length === 0"
+              tooltip="Descargar reporte PDF y guardar en historial"
+              :saveMetadata="true"
+              :filtros="reportFilters"
+              :generatedBy="generatedBy"
+            />
 
-                <div>
-                  <q-btn label="Historial" icon="history" color="grey-7" @click="openHistory" />
-                </div>
-              </div>
+            <q-btn label="Historial" icon="history" color="grey-7" @click="openHistory" />
+          </div>
             </q-card-section>
       </q-card>
 
@@ -458,7 +451,7 @@
           <q-card-section class="row items-center">
             <div class="col">
               <div class="text-h6">Historial de Reportes</div>
-              <div class="text-caption text-grey-7">Reportes previamente generados y guardados</div>
+              <div class="text-caption text-grey-7">Registro de reportes generados anteriormente</div>
             </div>
             <div>
               <q-btn icon="close" flat @click="showHistory = false" />
@@ -476,41 +469,40 @@
               <q-table
                 :rows="historyList"
                 :columns="[
-                  { name: 'titulo', label: 'Título del Reporte', field: 'tipoReporte', align: 'left' },
-                  { name: 'fecha', label: 'Fecha de Generación', field: 'fechaGeneracion', align: 'center' },
+                  { name: 'nombre', label: 'Nombre del Archivo', field: 'rutaArchivo', align: 'left',
+                    format: (val) => val ? val.replace(/\.pdf$/i, '') : '-' },
+                  { name: 'fecha', label: 'Fecha de Generación', field: 'fechaGeneracion', align: 'center', 
+                    format: (val) => val ? new Date(val).toLocaleString('es-ES', { 
+                      year: 'numeric', month: 'short', day: 'numeric', 
+                      hour: '2-digit', minute: '2-digit' 
+                    }) : '-' },
                   { name: 'formato', label: 'Formato', field: 'formato', align: 'center' },
-                  { name: 'acciones', label: 'Acciones', field: 'acciones', align: 'center' }
+                  { name: 'filtros', label: 'Filtros Aplicados', field: 'filtros', align: 'center' }
                 ]"
                 row-key="idReporte"
                 flat
                 bordered
                 separator="horizontal"
               >
-                <template v-slot:body-cell-acciones="props">
+                <template v-slot:body-cell-filtros="props">
                   <q-td :props="props">
                     <q-btn 
                       size="sm" 
                       flat 
-                      icon="download" 
+                      icon="info" 
                       color="primary"
-                      @click="downloadReport(props.row)"
+                      @click="showReportDetails(props.row)"
                     >
-                      <q-tooltip>Descargar PDF</q-tooltip>
+                      <q-tooltip>Ver detalles</q-tooltip>
                     </q-btn>
-                    <q-btn 
-                      size="sm" 
-                      flat 
-                      icon="delete" 
-                      color="negative" 
-                      @click="deleteReport(props.row.idReporte)"
-                    >
-                      <q-tooltip>Eliminar reporte</q-tooltip>
-                    </q-btn>
+                    <!-- Botón eliminar removido: el historial es un registro auditable y no debe modificarse -->
                   </q-td>
                 </template>
               </q-table>
 
-              <div v-if="historyList.length === 0" class="text-center text-grey-6 q-pa-md">No hay reportes guardados</div>
+              <div v-if="historyList.length === 0" class="text-center text-grey-6 q-pa-md">
+                No hay reportes en el historial
+              </div>
             </div>
           </q-card-section>
 
@@ -518,6 +510,78 @@
 
           <q-card-actions align="right">
             <q-btn flat label="Cerrar" @click="showHistory = false" />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
+
+      <!-- Diálogo para mostrar filtros aplicados al reporte -->
+      <q-dialog v-model="detailsDialog">
+        <q-card style="min-width: 450px; max-width: 90vw;">
+          <q-card-section class="row items-center">
+            <div class="col">
+              <div class="text-h6">Filtros Aplicados</div>
+              <div class="text-caption text-grey-7">Configuración usada para generar este reporte</div>
+            </div>
+            <div>
+              <q-btn icon="close" flat round dense @click="detailsDialog = false" />
+            </div>
+          </q-card-section>
+
+          <q-separator />
+
+          <q-card-section v-if="selectedReportDetails">
+            <div>
+              <!-- Tipo de SLA -->
+              <div class="q-mb-md">
+                <div class="text-overline text-grey-7">Tipo de SLA</div>
+                <div class="text-body1 text-weight-medium text-primary">{{ selectedReportDetails.tipoReporte || 'N/A' }}</div>
+              </div>
+
+              <q-separator class="q-my-md" />
+
+              <!-- Filtros aplicados -->
+              <div v-if="selectedReportDetails.filtros && !selectedReportDetails.filtros.error">
+                <q-list dense bordered separator class="rounded-borders">
+                  <q-item v-if="selectedReportDetails.filtros.startDate || selectedReportDetails.filtros.endDate">
+                    <q-item-section avatar>
+                      <q-icon name="event" color="primary" />
+                    </q-item-section>
+                    <q-item-section>
+                      <q-item-label caption>Período</q-item-label>
+                      <q-item-label>{{ selectedReportDetails.filtros.startDate || 'N/A' }} a {{ selectedReportDetails.filtros.endDate || 'N/A' }}</q-item-label>
+                    </q-item-section>
+                  </q-item>
+                  <q-item v-if="selectedReportDetails.filtros.tipoSolicitud">
+                    <q-item-section avatar>
+                      <q-icon name="description" color="primary" />
+                    </q-item-section>
+                    <q-item-section>
+                      <q-item-label caption>Tipo de Solicitud</q-item-label>
+                      <q-item-label>{{ selectedReportDetails.filtros.tipoSolicitud }}</q-item-label>
+                    </q-item-section>
+                  </q-item>
+                  <q-item v-if="selectedReportDetails.filtros.bloqueTech">
+                    <q-item-section avatar>
+                      <q-icon name="group" color="primary" />
+                    </q-item-section>
+                    <q-item-section>
+                      <q-item-label caption>Bloques Tech</q-item-label>
+                      <q-item-label>{{ Array.isArray(selectedReportDetails.filtros.bloqueTech) ? selectedReportDetails.filtros.bloqueTech.join(', ') : selectedReportDetails.filtros.bloqueTech }}</q-item-label>
+                    </q-item-section>
+                  </q-item>
+                </q-list>
+              </div>
+              <div v-else class="text-center text-grey-6 q-pa-md">
+                <q-icon name="info" size="md" class="q-mb-sm" />
+                <div>No se aplicaron filtros específicos</div>
+              </div>
+            </div>
+          </q-card-section>
+
+          <q-separator />
+
+          <q-card-actions align="right">
+            <q-btn flat label="Cerrar" color="primary" @click="detailsDialog = false" />
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -636,6 +700,13 @@ const getDefaultDates = () => {
 
 const defaultDates = getDefaultDates()
 
+// Filtros TEMPORALES (se editan en los inputs pero NO se aplican hasta presionar el botón)
+const tempFilters = ref({
+  startDate: defaultDates.startDate,
+  endDate: defaultDates.endDate,
+})
+
+// Filtros APLICADOS (se usan para mostrar KPIs y para el reporte)
 const reportFilters = ref({
   startDate: defaultDates.startDate,
   endDate: defaultDates.endDate,
@@ -671,6 +742,12 @@ const dynamicReportTitle = computed(() => {
   const tipoLabel = selectedSlaTypeLabel.value
   return `Reporte Indicadores ${tipoLabel}`
 })
+
+// Código SLA para enviar al backend (ej: "SLA1", "SLA2")
+const reportSlaCode = computed(() => {
+  return selectedSlaType.value || 'SLA'
+})
+
 // REPORT TITLE editable: por defecto toma el título dinámico, pero el usuario puede editarlo
 const reportTitle = ref(dynamicReportTitle.value)
 const reportTitleEdited = ref(false)
@@ -734,42 +811,40 @@ function openHistory() {
   fetchHistory()
 }
 
-function downloadReport(r) {
+// Estado para el diálogo de detalles
+const detailsDialog = ref(false)
+const selectedReportDetails = ref(null)
+
+function showReportDetails(report) {
   try {
-    const ruta = r.rutaArchivo || r.ruta || r.path || ''
-    if (!ruta) {
-      $q.notify({ type: 'negative', message: 'Ruta de archivo no disponible' })
-      return
+    // Parsear filtros JSON
+    let filtrosObj = {}
+    try {
+      const parsed = report.filtrosJson ? JSON.parse(report.filtrosJson) : {}
+      // Extraer el objeto 'filtros' si existe (viene como {filtros: {...}})
+      filtrosObj = parsed.filtros || parsed
+    } catch (e) {
+      console.error('Error parseando filtrosJson:', e)
+      filtrosObj = { error: 'No se pudieron cargar los filtros' }
     }
-    const fileBase = apiUrl.replace(/\/api\/?$/, '')
-    const url = ruta.startsWith('http') ? ruta : `${fileBase}${ruta}`
-    window.open(url, '_blank')
+    
+    // Guardar detalles para mostrar en el diálogo
+    selectedReportDetails.value = {
+      tipoReporte: report.tipoReporte,
+      rutaArchivo: report.rutaArchivo,
+      fechaGeneracion: report.fechaGeneracion,
+      filtros: filtrosObj
+    }
+    
+    // Abrir diálogo
+    detailsDialog.value = true
   } catch (err) {
-    console.error(err)
-    $q.notify({ type: 'negative', message: 'No se pudo descargar el reporte' })
+    console.error('Error mostrando detalles:', err)
+    $q.notify({ type: 'negative', message: 'Error al mostrar los filtros del reporte' })
   }
 }
 
-async function deleteReport(id) {
-  try {
-    const token = localStorage.getItem('token')
-    const res = await fetch(`${apiUrl}/Reporte/${id}`, {
-      method: 'DELETE',
-      headers: token ? { Authorization: `Bearer ${token}` } : {}
-    })
-    if (!res.ok) {
-      const txt = await res.text()
-      console.error('Error delete', res.status, txt)
-      $q.notify({ type: 'negative', message: 'Error al eliminar el reporte' })
-      return
-    }
-    $q.notify({ type: 'positive', message: 'Reporte eliminado' })
-    fetchHistory()
-  } catch (err) {
-    console.error(err)
-    $q.notify({ type: 'negative', message: 'Error al eliminar reporte' })
-  }
-}
+// Función deleteReport removida - el historial es un registro auditable y no debe modificarse
 
 // ============= DATOS FILTRADOS POR SLA APLICADO =============
 // Filtra TODOS los datos primero por el tipo de SLA APLICADO (solo cambia al presionar botón)
@@ -1004,7 +1079,19 @@ const incumplimientosDataForPdf = computed(() => {
 })
 
 const authStore = useAuthStore()
-const generatedBy = computed(() => authStore.user?.id || 0)
+
+// Obtener ID del usuario de forma segura
+const generatedBy = computed(() => {
+  const usr = authStore.user
+  if (!usr) return 0
+  
+  // Intentar múltiples propiedades posibles
+  const userId = usr.id || usr.idUsuario || usr.IdUsuario || usr.userId || usr.UserId || 0
+  
+  console.log('Generated By - Usuario:', usr, 'ID extraído:', userId)
+  return userId
+})
+
 const rolesList = ref([])
 
 // Opciones para multi-select (sin 'Todos' inicial, se maneja con lógica especial)
@@ -1083,6 +1170,10 @@ async function fetchCatalogData() {
 }
 
 function applyFilters() {
+  // COPIAR filtros temporales a filtros aplicados
+  reportFilters.value.startDate = tempFilters.value.startDate
+  reportFilters.value.endDate = tempFilters.value.endDate
+  
   // APLICAR el SLA seleccionado (copiar de selectedSlaType a appliedSlaType)
   appliedSlaType.value = selectedSlaType.value
   
@@ -1141,6 +1232,14 @@ function applyFilters() {
 
 function clearFilters() {
   const defaultDates = getDefaultDates()
+  
+  // Resetear filtros temporales
+  tempFilters.value = {
+    startDate: defaultDates.startDate,
+    endDate: defaultDates.endDate,
+  }
+  
+  // Resetear filtros aplicados
   reportFilters.value = {
     startDate: defaultDates.startDate,
     endDate: defaultDates.endDate,
@@ -1161,10 +1260,19 @@ function clearFilters() {
 }
 
 function generateFilename() {
-  const date = new Date().toISOString().split('T')[0]
-  // Usar el código SLA directamente (SLA1, SLA2, etc.)
-  const codigo = (selectedSlaType.value || 'sla').toLowerCase() // fallback a 'sla' si es null
-  return `reporte-${codigo}-${date}.pdf`
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  const hours = String(now.getHours()).padStart(2, '0')
+  const minutes = String(now.getMinutes()).padStart(2, '0')
+  const dateStr = `${year}-${month}-${day}_${hours}${minutes}`
+  
+  // Obtener el tipo de SLA (ejemplo: "Nuevo Personal" -> "SLA1")
+  const slaCode = selectedSlaType.value || 'SLA'
+  
+  // Formato: Reporte Indicadores SLA1_2025-11-27_1039.pdf
+  return `Reporte Indicadores ${slaCode}_${dateStr}.pdf`
 }
 
 function getColorGeneric(percentage) {
@@ -1204,8 +1312,13 @@ onMounted(async () => {
     if (saved.selectedSlaType) {
       selectedSlaType.value = saved.selectedSlaType
       appliedSlaType.value = saved.appliedSlaType
+      
+      // Restaurar AMBOS: temporales y aplicados
+      tempFilters.value.startDate = saved.startDate
+      tempFilters.value.endDate = saved.endDate
       reportFilters.value.startDate = saved.startDate
       reportFilters.value.endDate = saved.endDate
+      
       selectedBloquesTech.value = saved.selectedBloquesTech || ['TODOS']
       
       // Refrescar datos con los filtros guardados

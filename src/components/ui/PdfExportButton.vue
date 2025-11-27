@@ -29,6 +29,7 @@ const props = defineProps({
   kpiData: { type: Object, default: () => ({}) },
   incumplimientosData: { type: Array, default: () => [] },
   title: { type: String, default: 'Reporte de SLA' },
+  slaCode: { type: String, default: 'SLA' }, // Código SLA para BD (ej: "SLA1", "SLA2")
   filename: { type: String, default: 'reporte-sla.pdf' },
   buttonLabel: { type: String, default: 'Exportar PDF' },
   buttonIcon: { type: String, default: 'picture_as_pdf' },
@@ -38,7 +39,6 @@ const props = defineProps({
   outline: { type: Boolean, default: false },
   flat: { type: Boolean, default: false },
   tooltip: { type: String, default: '' },
-  upload: { type: Boolean, default: false },
   saveMetadata: { type: Boolean, default: false },
   filtros: { type: Object, default: () => ({}) },
   generatedBy: { type: Number, default: null },
@@ -367,69 +367,67 @@ async function generatePdf() {
       doc.text(`Sistema de Control y Seguimiento de Indicadores SLA - Página ${i} de ${pageCount}`, 14, doc.internal.pageSize.height - 10)
     }
 
-    // Obtener blob para posible subida
-    const pdfBlob = doc.output('blob')
+    // Descargar PDF directamente al navegador
     doc.save(props.filename)
 
     emit('pdf-generated', props.filename)
 
-    // Subir y guardar metadata si se solicitó
-    if (props.upload) {
-      try {
-        const form = new FormData()
-        form.append('file', pdfBlob, props.filename)
-
-        const uploadResp = await api.post('/Reporte/upload', form, { headers: { 'Content-Type': 'multipart/form-data' } })
-        const ruta = uploadResp.data?.ruta || uploadResp.data?.rutaArchivo
-
-        if (props.saveMetadata && ruta) {
-          // Validar que el usuario esté autenticado
-          if (!props.generatedBy || props.generatedBy === 0) {
-            console.warn('No se puede guardar metadata: usuario no autenticado')
-            $q.notify({ 
-              type: 'warning', 
-              message: 'Advertencia: No se guardó el historial del reporte (usuario no autenticado)',
-              icon: 'warning'
-            })
-          } else {
-            try {
-              const dto = {
-                tipoReporte: props.title || 'Indicadores SLA',
-                formato: 'PDF',
-                filtrosJson: JSON.stringify({ filtros: props.filtros || {} }),
-                generadoPor: props.generatedBy,
-                rutaArchivo: ruta,
-              }
-              await api.post('/Reporte', dto)
-            } catch (metaErr) {
-              console.error('Error guardando metadata del reporte:', metaErr)
-              const errorMsg = metaErr?.response?.data?.message || metaErr?.message || 'Error desconocido'
-              $q.notify({ 
-                type: 'warning', 
-                message: `Advertencia: No se guardó el historial del reporte: ${errorMsg}`,
-                icon: 'warning'
-              })
-            }
+    // Guardar solo metadata (historial) en BD si se solicitó
+    if (props.saveMetadata) {
+      // Validar que el usuario esté autenticado
+      if (!props.generatedBy || props.generatedBy === 0) {
+        console.warn('No se puede guardar historial: usuario no autenticado')
+        $q.notify({ 
+          type: 'warning', 
+          message: 'PDF descargado. No se guardó en el historial (usuario no autenticado)',
+          icon: 'warning'
+        })
+      } else {
+        try {
+          // Simplificar filtros para evitar JSON muy grande
+          const simplifiedFilters = {
+            startDate: props.filtros?.startDate || null,
+            endDate: props.filtros?.endDate || null,
+            tipoSolicitud: props.filtros?.tipoSolicitud || null,
+            bloqueTech: props.filtros?.bloqueTech || null
           }
+          
+          const dto = {
+            tipoReporte: props.slaCode || 'SLA', // Usar código SLA corto (ej: "SLA1", "SLA2")
+            formato: 'PDF',
+            filtrosJson: JSON.stringify({ filtros: simplifiedFilters }),
+            generadoPor: props.generatedBy,
+            nombreArchivo: props.filename // Nombre del PDF descargado
+          }
+          
+          console.log('[PdfExportButton] Enviando DTO:', dto)
+          console.log('[PdfExportButton] Código SLA:', props.slaCode)
+          
+          await api.post('/Reporte', dto)
+          $q.notify({ 
+            type: 'positive', 
+            message: 'Reporte generado exitosamente',
+            icon: 'check_circle',
+            position: 'top'
+          })
+        } catch (metaErr) {
+          console.error('Error guardando historial del reporte:', metaErr)
+          const errorMsg = metaErr?.response?.data?.message || metaErr?.message || 'Error desconocido'
+          $q.notify({ 
+            type: 'warning', 
+            message: `PDF descargado. Error al guardar historial: ${errorMsg}`,
+            icon: 'warning'
+          })
         }
-
-        $q.notify({ type: 'positive', message: 'PDF subido al servidor', icon: 'upload' })
-        emit('pdf-uploaded', ruta)
-      } catch (err) {
-        console.error('Error subiendo PDF:', err)
-        // Mejor detalle del error si existe response
-        let msg = 'Error subiendo PDF al servidor'
-        if (err?.response) {
-          msg += ` (${err.response.status}): ${JSON.stringify(err.response.data)}`
-        } else if (err?.message) {
-          msg += `: ${err.message}`
-        }
-        $q.notify({ type: 'negative', message: msg })
-        emit('pdf-error', err)
       }
+    } else {
+      $q.notify({ 
+        type: 'positive', 
+        message: 'PDF descargado exitosamente', 
+        icon: 'check_circle', 
+        position: 'top' 
+      })
     }
-
-    $q.notify({ type: 'positive', message: 'PDF generado exitosamente', icon: 'check_circle', position: 'top' })
   } catch (error) {
     console.error('Error al generar PDF:', error)
     emit('pdf-error', error)

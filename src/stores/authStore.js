@@ -56,8 +56,25 @@ export const useAuthStore = defineStore('auth', () => {
         if (parts.length === 3) {
           const payloadJson = atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'))
           const claims = JSON.parse(payloadJson)
+          
+          console.log('JWT Claims decodificados:', claims)
+          
+          // Intentar extraer ID de múltiples posibles ubicaciones
+          const possibleIds = [
+            claims.UserId,
+            claims.userId, 
+            claims.sub,
+            claims.User_Id,
+            claims['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier']
+          ]
+          
+          const extractedId = possibleIds.find(id => id != null && id !== undefined)
+          const parsedId = extractedId ? parseInt(extractedId, 10) : null
+          
+          console.log('ID extraído del JWT:', parsedId)
+          
           parsedUser = {
-            id: claims.UserId || claims.userId || claims.sub || claims.User_Id || null,
+            id: parsedId,
             name:
               claims.name ||
               claims['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'] ||
