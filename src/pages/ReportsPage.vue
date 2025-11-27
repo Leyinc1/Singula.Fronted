@@ -71,7 +71,7 @@
                 </template>
               </q-input>
               <div class="text-caption text-grey-7 q-mt-xs">
-                {{ reportFilters.endDate ? 'Máximo: ' + formatDate(reportFilters.endDate) : 'Sin límite superior' }}
+                Máximo: {{ reportFilters.endDate ? formatDate(reportFilters.endDate) : formatDate(maxFechaFin) }}
               </div>
             </div>
 
@@ -614,12 +614,23 @@ const selectedSlaTypeLabel = computed(() => {
 // Calcular fechas por defecto: hoy y 2 meses antes
 const getDefaultDates = () => {
   const today = new Date()
-  const twoMonthsAgo = new Date()
+  // Usar fecha local sin conversión a UTC que cambia el día
+  const year = today.getFullYear()
+  const month = String(today.getMonth() + 1).padStart(2, '0')
+  const day = String(today.getDate()).padStart(2, '0')
+  const todayStr = `${year}-${month}-${day}`
+  
+  // Calcular 2 meses antes
+  const twoMonthsAgo = new Date(today)
   twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2)
+  const yearAgo = twoMonthsAgo.getFullYear()
+  const monthAgo = String(twoMonthsAgo.getMonth() + 1).padStart(2, '0')
+  const dayAgo = String(twoMonthsAgo.getDate()).padStart(2, '0')
+  const twoMonthsAgoStr = `${yearAgo}-${monthAgo}-${dayAgo}`
   
   return {
-    startDate: twoMonthsAgo.toISOString().split('T')[0],
-    endDate: today.toISOString().split('T')[0]
+    startDate: twoMonthsAgoStr,
+    endDate: todayStr
   }
 }
 
@@ -632,9 +643,13 @@ const reportFilters = ref({
   tipoSolicitud: null, // Se llena dinámicamente al aplicar filtros
 })
 
-// Fecha máxima permitida (hoy)
+// Fecha máxima permitida (hoy - fecha local)
 const maxFechaFin = computed(() => {
-  return new Date().toISOString().split('T')[0]
+  const today = new Date()
+  const year = today.getFullYear()
+  const month = String(today.getMonth() + 1).padStart(2, '0')
+  const day = String(today.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 })
 
 // Multi-select para Bloques Tech (por defecto 'Todos')
@@ -654,21 +669,7 @@ function formatDate(dateString) {
 // ============= TÍTULO DINÁMICO DEL PDF =============
 const dynamicReportTitle = computed(() => {
   const tipoLabel = selectedSlaTypeLabel.value
-  
-  // Si hay fechas seleccionadas, usar ese período
-  if (reportFilters.value.startDate || reportFilters.value.endDate) {
-    const inicio = reportFilters.value.startDate ? formatDate(reportFilters.value.startDate) : 'Inicio'
-    const fin = reportFilters.value.endDate ? formatDate(reportFilters.value.endDate) : 'Hoy'
-    return `Reporte Indicadores ${tipoLabel} - ${inicio} al ${fin}`
-  }
-  
-  // Si no hay fechas, usar mes actual
-  const now = new Date()
-  const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
-                      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
-  const mes = monthNames[now.getMonth()]
-  const año = now.getFullYear()
-  return `Reporte Indicadores ${tipoLabel} - ${mes} ${año}`
+  return `Reporte Indicadores ${tipoLabel}`
 })
 // REPORT TITLE editable: por defecto toma el título dinámico, pero el usuario puede editarlo
 const reportTitle = ref(dynamicReportTitle.value)
