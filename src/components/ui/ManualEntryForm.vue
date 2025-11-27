@@ -263,12 +263,25 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
 import { useConfigStore } from 'src/stores/configStore'
 
 const $q = useQuasar()
 const configStore = useConfigStore()
+
+onMounted(async () => {
+  // Cargar configuración desde el backend
+  console.log('Cargando datos de configuración desde el backend...')
+  if (typeof configStore.fetchAllConfig === 'function') {
+    try {
+      await configStore.fetchAllConfig()
+      console.log('Datos de configuración cargados exitosamente')
+    } catch (error) {
+      console.error('Error al cargar datos de configuración:', error)
+    }
+  }
+})
 
 const emit = defineEmits(['entry-created'])
 

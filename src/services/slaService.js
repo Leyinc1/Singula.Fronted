@@ -99,7 +99,7 @@ export const slaService = {
       if (filters.bloqueTech) params.bloque_tech = filters.bloqueTech
       if (filters.tipoSolicitud) params.tipo_solicitud = filters.tipoSolicitud
 
-      const response = await apiClient.get('/sla/data', { params })
+      const response = await apiClient.get('/api/sla/data', { params })
       return response.data
     } catch (error) {
       console.error('Error al obtener datos SLA:', error)
@@ -121,7 +121,7 @@ export const slaService = {
       const formData = new FormData()
       formData.append('file', file)
 
-      const response = await apiClient.post('/sla/upload', formData, {
+      const response = await apiClient.post('/api/sla/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -141,7 +141,7 @@ export const slaService = {
    */
   async createManualEntry(solicitud) {
     try {
-      const response = await apiClient.post('/sla/manual', solicitud)
+      const response = await apiClient.post('/api/sla/manual', solicitud)
       return response.data
     } catch (error) {
       console.error('Error al crear solicitud manual:', error)
