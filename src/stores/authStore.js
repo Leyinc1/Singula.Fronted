@@ -108,33 +108,61 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function updateProfile(userData) {
+  async function updateUserProfile(userData) {
     loading.value = true
     try {
+      console.log('📝 Actualizando perfil en BD:', userData)
       const result = await authService.updateProfile(userData)
+      console.log('✅ Perfil actualizado en BD:', result)
+      
       // Actualizar el user completo manteniendo los datos existentes
       user.value = { 
         ...user.value, 
         ...result,
-        nombreCompleto: result.nombreCompleto || `${userData.nombres || ''} ${userData.apellidos || ''}`.trim()
+        nombres: userData.nombres,
+        apellidos: userData.apellidos,
+        correo: userData.correo,
+        documento: userData.documento,
+        nombreCompleto: `${userData.nombres || ''} ${userData.apellidos || ''}`.trim()
       }
       localStorage.setItem('user', JSON.stringify(user.value))
+      console.log('💾 Usuario actualizado en localStorage:', user.value)
       return result
     } catch (error) {
-      console.error('Error updating profile:', error)
+      console.error('❌ Error updating profile:', error)
       throw error
     } finally {
       loading.value = false
     }
   }
 
-  async function changePassword(currentPassword, newPassword, confirmPassword) {
+  async function changeUserPassword(currentPassword, newPassword, confirmPassword) {
+    loading.value = true
     try {
+      console.log('🔐 Cambiando contraseña en BD...')
       const result = await authService.changePassword(currentPassword, newPassword, confirmPassword)
+      console.log('✅ Contraseña actualizada en BD')
       return result
     } catch (error) {
-      console.error('Error changing password:', error)
+      console.error('❌ Error changing password:', error)
       throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function loadUserProfile() {
+    loading.value = true
+    try {
+      const result = await authService.getCurrentUser()
+      user.value = result
+      localStorage.setItem('user', JSON.stringify(result))
+      return result
+    } catch (error) {
+      console.error('Error loading profile:', error)
+      throw error
+    } finally {
+      loading.value = false
     }
   }
 
@@ -165,8 +193,9 @@ export const useAuthStore = defineStore('auth', () => {
     register,
     logout,
     getCurrentUser,
-    updateProfile,
-    changePassword,
+    updateUserProfile,
+    changeUserPassword,
+    loadUserProfile,
     setToken,
     setUser,
   }

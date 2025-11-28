@@ -98,20 +98,21 @@ export async function getCurrentUser() {
     const response = await apiClient.get('/Usuarios/profile/me')
     console.log('✅ Perfil obtenido:', response.data)
     
-    // Mapear respuesta a formato esperado por el frontend
+    // Mapear respuesta de PostgreSQL al frontend simplificado
     const userData = response.data
     return {
       id_usuario: userData.id_usuario || userData.id,
       username: userData.username,
       correo: userData.correo,
+      // Campos principales del perfil
+      nombres: userData.nombres || '',
+      apellidos: userData.apellidos || '',
+      documento: userData.documento || '',
+      // Campo calculado para mostrar
       nombreCompleto: userData.nombres && userData.apellidos 
         ? `${userData.nombres} ${userData.apellidos}` 
         : userData.nombreCompleto,
-      nombres: userData.nombres,
-      apellidos: userData.apellidos,
-      telefono: userData.telefono,
-      documento: userData.documento,
-      biografia: userData.biografia,
+      // Campos adicionales del sistema
       rol: userData.rol_sistema?.nombre || 'user',
       id_rol_sistema: userData.id_rol_sistema,
       estado: userData.estado_usuario?.descripcion || 'Activo',
@@ -129,21 +130,19 @@ export async function getCurrentUser() {
  */
 export async function updateProfile(userData) {
   try {
-    // Formatear datos según la estructura de PostgreSQL
+    // Datos para tabla personal y usuario
     const profileData = {
-      // Datos de tabla personal
-      nombres: userData.nombres || userData.name?.split(' ')[0] || '',
-      apellidos: userData.apellidos || userData.name?.split(' ').slice(1).join(' ') || '',
-      documento: userData.documento || '',
-      telefono: userData.telefono || userData.phone || null,
-      // Campos adicionales si existen
-      biografia: userData.biografia || userData.bio || null
+      // Tabla personal
+      nombres: userData.nombres,
+      apellidos: userData.apellidos,
+      documento: userData.documento,
+      // Tabla usuario  
+      correo: userData.correo
     }
     
-    console.log('Actualizando perfil:', profileData)
+    console.log('Actualizando perfil en BD:', profileData)
     const response = await apiClient.put('/Usuarios/profile', profileData)
     
-    // Retornar datos actualizados
     return {
       ...response.data,
       nombreCompleto: `${profileData.nombres} ${profileData.apellidos}`.trim()
