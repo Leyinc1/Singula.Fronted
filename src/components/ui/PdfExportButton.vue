@@ -20,7 +20,8 @@ import { useQuasar } from 'quasar'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { api } from 'src/boot/axios'
-import logoUrl from 'src/assets/tata-consultancy-services-logo-png.png'
+// Importar logo SVG
+import logoSvgUrl from 'src/assets/tata-consultancy-services-logo-svg.svg'
 
 const $q = useQuasar()
 
@@ -54,19 +55,92 @@ async function generatePdf() {
   try {
     const doc = new jsPDF()
 
-    // Header: logo (left) + title
+    // ============================================
+    // 🖼️ CARGA DEL LOGO SVG
+    // ============================================
     let logoData = null
+    
     try {
-      const resp = await fetch(logoUrl)
-      const blob = await resp.blob()
-      logoData = await new Promise((resolve) => {
-        const reader = new FileReader()
-        reader.onload = () => resolve(reader.result)
-        reader.readAsDataURL(blob)
+      // Cargar SVG y convertir a imagen
+      const resp = await fetch(logoSvgUrl)
+      const svgText = await resp.text()
+      
+      // Crear imagen desde SVG
+      const img = new Image()
+      const svgBlob = new Blob([svgText], { type: 'image/svg+xml' })
+      const svgUrl = URL.createObjectURL(svgBlob)
+      
+      logoData = await new Promise((resolve, reject) => {
+        img.onload = () => {
+          const canvas = document.createElement('canvas')
+          const ctx = canvas.getContext('2d')
+          
+          // Aumentar resolución para mejor calidad
+          const scale = 3 // Factor de escala para alta resolución
+          canvas.width = img.width * scale
+          canvas.height = img.height * scale
+          
+          // Dibujar imagen con alta calidad
+          ctx.imageSmoothingEnabled = true
+          ctx.imageSmoothingQuality = 'high'
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+          
+          // Recortar espacios en blanco (crop automático)
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+          const { data, width, height } = imageData
+          
+          let top = height, bottom = 0, left = width, right = 0
+          
+          // Encontrar límites del contenido (píxeles no blancos)
+          for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+              const index = (y * width + x) * 4
+              const r = data[index]
+              const g = data[index + 1]
+              const b = data[index + 2]
+              const a = data[index + 3]
+              
+              // Si no es blanco o transparente
+              if (a > 10 && (r < 240 || g < 240 || b < 240)) {
+                if (y < top) top = y
+                if (y > bottom) bottom = y
+                if (x < left) left = x
+                if (x > right) right = x
+              }
+            }
+          }
+          
+          // Agregar un pequeño margen (5% del tamaño)
+          const margin = Math.floor((right - left) * 0.05)
+          top = Math.max(0, top - margin)
+          bottom = Math.min(height - 1, bottom + margin)
+          left = Math.max(0, left - margin)
+          right = Math.min(width - 1, right + margin)
+          
+          const croppedWidth = right - left + 1
+          const croppedHeight = bottom - top + 1
+          
+          // Crear canvas con imagen recortada
+          const croppedCanvas = document.createElement('canvas')
+          croppedCanvas.width = croppedWidth
+          croppedCanvas.height = croppedHeight
+          const croppedCtx = croppedCanvas.getContext('2d')
+          
+          croppedCtx.drawImage(
+            canvas,
+            left, top, croppedWidth, croppedHeight,
+            0, 0, croppedWidth, croppedHeight
+          )
+          
+          resolve(croppedCanvas.toDataURL('image/png'))
+          URL.revokeObjectURL(svgUrl)
+        }
+        img.onerror = reject
+        img.src = svgUrl
       })
     } catch (err) {
-      // no bloquear si falla la carga del logo
-      console.warn('No se pudo cargar logo para PDF', err)
+      // No bloquear si falla la carga del logo
+      console.warn('No se pudo cargar logo SVG para PDF', err)
     }
 
     // Indicator radius variable (ajustar para tamaño de círculo en PDF)
@@ -77,8 +151,8 @@ async function generatePdf() {
     // Logo en la esquina superior izquierda (como encabezado)
     if (logoData) {
       try {
-        const logoWidth = 55
-        const logoHeight = 20
+        const logoWidth = 35  // Reducido de 40
+        const logoHeight = 12  // Reducido de 14
         doc.addImage(logoData, 'PNG', 14, currentY, logoWidth, logoHeight)
         currentY += logoHeight + 8
       } catch (err) {
