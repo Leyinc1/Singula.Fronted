@@ -588,13 +588,13 @@ export const useConfigStore = defineStore('config', () => {
       if (response.data && response.data.length > 0) {
         // Crear un nuevo array para forzar reactividad de Vue
         const nuevasPrioridades = response.data.map((prioridad) => {
-          // Usar la descripción del backend directamente (ej: "Crítica", "Alta", "Media", "Baja")
-          // Esto asegura que coincida exactamente con los datos de las solicitudes
-          const nombreCorto = prioridad.descripcion
+          // IMPORTANTE: Usar el CÓDIGO (CRITICA, ALTA, MEDIA, BAJA) como nombre
+          // porque es el que se usa en las solicitudes y en el dashboard
+          const nombreCodigo = prioridad.codigo
 
           return {
             id: prioridad.idPrioridad,
-            nombre: nombreCorto, // Usar descripción del backend para matching exacto con datos
+            nombre: nombreCodigo, // USAR CÓDIGO para compatibilidad con dashboard y solicitudes
             codigo: prioridad.codigo,
             descripcion: prioridad.descripcion || '',
             nivel: prioridad.nivel,

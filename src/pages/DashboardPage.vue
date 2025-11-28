@@ -243,10 +243,19 @@
       <!-- Gráfico Principal -->
       <div class="row q-col-gutter-md q-mb-lg">
         <div class="col-12 col-lg-6">
-          <SlaChart :data="chartDataByRole" :loading="loading" title="Cumplimiento SLA por Área" />
+          <SlaChart
+            :key="`sla-chart-${filterKey}`"
+            :data="chartDataByRole"
+            :loading="loading"
+            title="Cumplimiento SLA por Área"
+          />
         </div>
         <div class="col-12 col-lg-6">
-          <PriorityChart :data="chartDataByPriority" :loading="loading" />
+          <PriorityChart
+            :key="`priority-chart-${filterKey}`"
+            :data="chartDataByPriority"
+            :loading="loading"
+          />
         </div>
       </div>
     </div>
@@ -274,6 +283,9 @@ const localFilters = ref({
   prioridad: [],
   cumpleSla: null,
 })
+
+// Key para forzar re-render de gráficos cuando cambian filtros
+const filterKey = ref(0)
 
 // Usar filteredData directamente del store
 const filteredSlaData = computed(() => slaStore.filteredData)
@@ -349,6 +361,8 @@ function applyFilters() {
     prioridad: localFilters.value.prioridad,
     cumpleSla: localFilters.value.cumpleSla,
   })
+  // Incrementar filterKey para forzar re-render de gráficos
+  filterKey.value++
 }
 
 function resetFilters() {
@@ -360,11 +374,15 @@ function resetFilters() {
     prioridad: [],
     cumpleSla: null,
   }
-  slaStore.resetFilters()
+  slaStore.clearFilters()
+  // Incrementar filterKey para forzar re-render de gráficos
+  filterKey.value++
 }
 
 function refreshData() {
   slaStore.fetchSlaData()
+  // Incrementar filterKey para forzar re-render de gráficos
+  filterKey.value++
 }
 </script>
 

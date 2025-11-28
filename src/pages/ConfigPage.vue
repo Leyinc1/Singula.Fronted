@@ -173,9 +173,9 @@
                       class="text-weight-bold"
                       :class="prioridad.activo ? 'text-black' : 'text-grey-6'"
                     >
-                      {{ prioridad.nombre }}
+                      {{ prioridad.descripcion }}
                     </q-item-label>
-                    <q-item-label caption>{{ prioridad.descripcion }}</q-item-label>
+                    <q-item-label caption>Código: {{ prioridad.codigo }}</q-item-label>
                     <q-item-label caption class="q-mt-xs">
                       Multiplicador SLA: {{ prioridad.slaMultiplier }}x
                     </q-item-label>
@@ -418,11 +418,11 @@
           <q-input
             v-model="nuevaPrioridad.nombre"
             filled
-            label="Nombre de la Prioridad *"
+            label="Código de la Prioridad * (ej: CRITICA, ALTA)"
             bg-color="white"
             class="q-mb-md"
             :disable="modoEdicionPrioridad"
-            :hint="modoEdicionPrioridad ? 'No se puede cambiar el nombre de una prioridad existente' : ''"
+            :hint="modoEdicionPrioridad ? 'No se puede cambiar el código de una prioridad existente' : 'Use mayúsculas sin espacios (CRITICA, ALTA, MEDIA, BAJA)'"
           >
             <template v-slot:prepend>
               <q-icon name="label" />
@@ -432,11 +432,12 @@
           <q-input
             v-model="nuevaPrioridad.descripcion"
             filled
-            label="Descripción"
+            label="Descripción completa *"
             bg-color="white"
             type="textarea"
             rows="2"
             class="q-mb-md"
+            hint="Ej: Prioridad Crítica - Requiere atención inmediata"
           >
             <template v-slot:prepend>
               <q-icon name="description" />
@@ -512,7 +513,7 @@
             color="black"
             @click="guardarPrioridad"
             :disable="
-              !nuevaPrioridad.nombre || !nuevaPrioridad.nivel || !nuevaPrioridad.slaMultiplier
+              !nuevaPrioridad.nombre || !nuevaPrioridad.descripcion || !nuevaPrioridad.nivel || !nuevaPrioridad.slaMultiplier
             "
           />
         </q-card-actions>
@@ -929,10 +930,10 @@ function editarPrioridad(prioridad) {
 
 async function guardarPrioridad() {
   // Validación básica
-  if (!nuevaPrioridad.value.nombre || !nuevaPrioridad.value.nivel || !nuevaPrioridad.value.slaMultiplier) {
+  if (!nuevaPrioridad.value.nombre || !nuevaPrioridad.value.descripcion || !nuevaPrioridad.value.nivel || !nuevaPrioridad.value.slaMultiplier) {
     $q.notify({
       type: 'warning',
-      message: 'Por favor complete todos los campos obligatorios',
+      message: 'Por favor complete todos los campos obligatorios (Código, Descripción, Nivel, Multiplicador)',
       position: 'top',
     })
     return
@@ -950,10 +951,10 @@ async function guardarPrioridad() {
 
   try {
     if (modoEdicionPrioridad.value && prioridadEnEdicion.value) {
-      // Editar prioridad existente - mantener código y nombre original
+      // Editar prioridad existente - mantener código original
       const prioridadDto = {
-        Codigo: nuevaPrioridad.value.codigo || nuevaPrioridad.value.nombre.toUpperCase().replace(/\s+/g, '_'),
-        Descripcion: nuevaPrioridad.value.descripcion || `Prioridad ${nuevaPrioridad.value.nombre} - Actualizada`,
+        Codigo: nuevaPrioridad.value.nombre, // nombre contiene el código (CRITICA, ALTA, etc.)
+        Descripcion: nuevaPrioridad.value.descripcion,
         Nivel: parseInt(nuevaPrioridad.value.nivel),
         SlaMultiplier: parseFloat(nuevaPrioridad.value.slaMultiplier),
         Icon: nuevaPrioridad.value.icon || 'label',
@@ -970,16 +971,16 @@ async function guardarPrioridad() {
       $q.notify({
         type: 'positive',
         message: 'Prioridad actualizada exitosamente',
-        caption: nuevaPrioridad.value.codigo || nuevaPrioridad.value.nombre,
+        caption: nuevaPrioridad.value.nombre,
         position: 'top',
         icon: 'check_circle',
       })
     } else {
-      // Agregar nueva prioridad - usar backend
+      // Agregar nueva prioridad
       const prioridadDto = {
-        codigo: nuevaPrioridad.value.nombre.toUpperCase().replace(/\s+/g, '_'),
+        codigo: nuevaPrioridad.value.nombre, // nombre contiene el código (CRITICA, ALTA, etc.)
         nombre: nuevaPrioridad.value.nombre,
-        descripcion: nuevaPrioridad.value.descripcion || `Prioridad ${nuevaPrioridad.value.nombre}`,
+        descripcion: nuevaPrioridad.value.descripcion,
         nivel: parseInt(nuevaPrioridad.value.nivel),
         slaMultiplier: parseFloat(nuevaPrioridad.value.slaMultiplier),
         icon: nuevaPrioridad.value.icon || 'label',
