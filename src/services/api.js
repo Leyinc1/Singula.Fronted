@@ -1,9 +1,8 @@
 import axios from 'axios'
 import { useAuthStore } from 'src/stores/authStore'
 
-// Base URL: prefer env var, fallback to local backend used in development
-// Backend launchSettings http URL: http://localhost:5192
-const API_BASE_URL = process.env.VUE_APP_API_URL || 'http://localhost:5192/api'
+// URL base del backend - ajustar según el entorno
+const API_BASE_URL = process.env.VUE_APP_API_URL || 'http://localhost:5000/api'
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,

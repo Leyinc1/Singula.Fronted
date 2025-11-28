@@ -1,10 +1,12 @@
 import { defineBoot } from '#q-app/wrappers'
 import axios from 'axios'
 
-// Base URL configurable via env, por defecto al backend local
-const BASE_URL = process.env.VUE_APP_API_URL || 'http://localhost:5192/api'
+// Configuración de URL:
+// Usamos la variable de entorno si existe.
+// Si no, usamos localhost:5000 que coincide con el puerto HTTP definido en Program.cs
+const BASE_URL = process.env.VUE_APP_API_URL || 'http://localhost:5000/api'
 
-// Instancia compartida de axios para la app
+// Instancia de axios
 const api = axios.create({
   baseURL: BASE_URL,
   timeout: 30000,
@@ -12,9 +14,12 @@ const api = axios.create({
     'Content-Type': 'application/json',
     Accept: 'application/json',
   },
+  // Nota: No usamos 'withCredentials: true' porque el backend usa JWT Bearer y CORS AllowAnyOrigin,
+  // lo cual suele ser incompatible con credenciales (cookies) en navegadores modernos.
 })
 
-// Interceptor simple para agregar Authorization desde localStorage (token)
+// Interceptor para inyectar el Token JWT
+// Necesario para que funcione con el 'AddJwtBearer' del backend
 api.interceptors.request.use(
   (config) => {
     try {
@@ -24,7 +29,7 @@ api.interceptors.request.use(
         config.headers.Authorization = `Bearer ${token}`
       }
     } catch {
-      // noop - evitar `no-unused-vars`
+      // Evitar errores si localStorage no es accesible
     }
 
     return config
@@ -37,4 +42,5 @@ export default defineBoot(({ app }) => {
   app.config.globalProperties.$api = api
 })
 
+// Exportar api para uso en otros módulos
 export { api }

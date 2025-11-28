@@ -5,6 +5,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { slaService } from 'src/services/slaService'
+import { useConfigStore } from './configStore'
 
 export const useSlaStore = defineStore('sla', () => {
   // Estado reactivo
@@ -29,9 +30,9 @@ export const useSlaStore = defineStore('sla', () => {
   const filters = ref({
     startDate: null,
     endDate: null,
-    bloqueTech: null,
-    tipoSolicitud: null,
-    prioridad: null,
+    bloqueTech: [], // Array para selección múltiple
+    tipoSolicitud: [], // Array para selección múltiple
+    prioridad: [], // Array para selección múltiple
     cumpleSla: null,
     dateField: 'fecha_solicitud',
   })
@@ -39,41 +40,67 @@ export const useSlaStore = defineStore('sla', () => {
   // Datos filtrados con todos los filtros aplicados
   const filteredData = computed(() => {
     let data = [...allData.value]
-
-    // Filtro por fecha de inicio / fin usando campo seleccionado
     const dateField = filters.value.dateField || 'fecha_solicitud'
+
+    // 1. Filtro Fecha Inicio
     if (filters.value.startDate) {
-      data = data.filter((record) => new Date(record[dateField]) >= new Date(filters.value.startDate))
+      data = data.filter((record) => {
+        // Soporte para ambos formatos de propiedad por si acaso
+        const dateVal = record[dateField] || record.fechaSolicitud
+        return new Date(dateVal) >= new Date(filters.value.startDate)
+      })
     }
 
+    // 2. Filtro Fecha Fin
     if (filters.value.endDate) {
-      data = data.filter((record) => new Date(record[dateField]) <= new Date(filters.value.endDate))
+      data = data.filter((record) => {
+        const dateVal = record[dateField] || record.fechaSolicitud
+        return new Date(dateVal) <= new Date(filters.value.endDate)
+      })
     }
 
-    // Filtro por BLOQUE TECH (acepta single o array)
-    if (filters.value.bloqueTech) {
-      if (Array.isArray(filters.value.bloqueTech)) {
-        data = data.filter((record) => filters.value.bloqueTech.includes(record.bloque_tech))
+    // 3. Filtro Bloque Tech (Local)
+    if (filters.value.bloqueTech && filters.value.bloqueTech.length > 0) {
+      // Manejar tanto array como string simple
+      const filterVal = filters.value.bloqueTech
+      if (Array.isArray(filterVal)) {
+        // Si no está vacío y no incluye TODOS (aunque TODOS suele limpiarse antes)
+        if (filterVal.length > 0 && !filterVal.includes('TODOS')) {
+          data = data.filter((record) => filterVal.includes(record.bloque_tech || record.bloqueTech))
+        }
       } else {
-        data = data.filter((record) => record.bloque_tech === filters.value.bloqueTech)
+        // String simple
+        data = data.filter((record) => (record.bloque_tech || record.bloqueTech) === filterVal)
       }
     }
 
-    // Filtro por tipo de solicitud
-    if (filters.value.tipoSolicitud) {
-      data = data.filter((record) => record.tipo_solicitud === filters.value.tipoSolicitud)
+    // 4. Filtro Tipo Solicitud
+    if (filters.value.tipoSolicitud && filters.value.tipoSolicitud.length > 0) {
+       // Aceptar array o string
+       const tipos = Array.isArray(filters.value.tipoSolicitud) ? filters.value.tipoSolicitud : [filters.value.tipoSolicitud]
+       data = data.filter((record) => tipos.includes(record.tipo_solicitud || record.tipoSolicitud))
     }
 
-    // Filtro por prioridad
-    if (filters.value.prioridad) {
-      data = data.filter((record) => record.prioridad === filters.value.prioridad)
+    // 5. Filtro Prioridad
+    if (filters.value.prioridad && filters.value.prioridad.length > 0) {
+      data = data.filter((record) => filters.value.prioridad.includes(record.prioridad))
     }
 
-    // Filtro por cumplimiento SLA (dinámico: detecta campo que comienza con 'cumple_')
+    // 6. Filtro Cumplimiento (Dinámico vs Legacy)
     if (filters.value.cumpleSla) {
       data = data.filter((record) => {
-        const cumpleField = Object.keys(record).find((k) => k.startsWith('cumple_'))
-        const cumpleVal = cumpleField ? record[cumpleField] === true : false
+        // Lógica dinámica (Feat): buscar campos cumple_...
+        const cumpleField = Object.keys(record).find((k) => k.startsWith('cumple_') || k.startsWith('cumpleSla'))
+        let cumpleVal = false
+
+        if (cumpleField) {
+          cumpleVal = record[cumpleField] === true
+        } else {
+          // Lógica Legacy (Master fallback)
+          cumpleVal = 
+            ((record.tipo_solicitud === 'Nuevo Personal' || record.tipoSolicitud === 'Nuevo Personal') && (record.cumple_sla1 || record.cumpleSla1)) ||
+            ((record.tipo_solicitud === 'Reemplazo' || record.tipoSolicitud === 'Reemplazo') && (record.cumple_sla2 || record.cumpleSla2))
+        }
 
         if (filters.value.cumpleSla === 'cumple') return cumpleVal
         if (filters.value.cumpleSla === 'no_cumple') return !cumpleVal
@@ -84,56 +111,116 @@ export const useSlaStore = defineStore('sla', () => {
     return data
   })
 
-  // KPIs calculados usando datos filtrados
-  // KPIs dinámicos por tipo de solicitud (SLA types)
+  // --- KPIs CALCULADOS ---
+
+  // 1. Tipos de SLA disponibles (Dinámico)
   const slaTypes = computed(() => {
-    const types = new Set(allData.value.map((r) => r.tipo_solicitud).filter(Boolean))
+    const types = new Set(allData.value.map((r) => r.tipo_solicitud || r.tipoSolicitud).filter(Boolean))
     return Array.from(types)
   })
 
+  // 2. KPI por SLA (Dinámico)
   const kpiBySla = computed(() => {
     const result = {}
     const data = filteredData.value || []
+    
     slaTypes.value.forEach((tipo) => {
-      const records = data.filter((r) => r.tipo_solicitud === tipo)
+      const records = data.filter((r) => (r.tipo_solicitud || r.tipoSolicitud) === tipo)
       if (records.length === 0) {
         result[tipo] = 0
         return
       }
 
-      // intentar detectar campo de cumplimiento dinámico
-      const cumpleField = Object.keys(records[0]).find((k) => k.startsWith('cumple_'))
-
-      if (cumpleField) {
-        const cumplidos = records.filter((r) => r[cumpleField] === true).length
-        result[tipo] = records.length > 0 ? ((cumplidos / records.length) * 100).toFixed(2) : 0
+      // Detectar campo de cumplimiento dinámicamente
+      // Prioridad: cumple_slaX (snake) -> cumpleSlaX (camel) -> lógica específica
+      let fieldName = null
+      
+      if (tipo === 'Nuevo Personal') fieldName = ['cumple_sla1', 'cumpleSla1']
+      else if (tipo === 'Reemplazo') fieldName = ['cumple_sla2', 'cumpleSla2']
+      
+      let cumplidos = 0
+      
+      if (fieldName) {
+        cumplidos = records.filter(r => r[fieldName[0]] === true || r[fieldName[1]] === true).length
       } else {
-        // fallback: contar como 0
-        result[tipo] = 0
+        // Fallback genérico
+        const genericField = Object.keys(records[0] || {}).find(k => k.startsWith('cumple_') || k.startsWith('cumpleSla'))
+        if (genericField) {
+           cumplidos = records.filter(r => r[genericField] === true).length
+        }
       }
+      
+      result[tipo] = records.length > 0 ? ((cumplidos / records.length) * 100).toFixed(2) : 0
     })
 
     return result
   })
 
-  // KPI de Eficacia: Total de solicitudes que cumplieron SLA / Total de solicitudes
+  // 3. Compatibilidad con Master (kpiSla1 / kpiSla2) mapeado a la lógica nueva
+  const kpiSla1 = computed(() => kpiBySla.value['Nuevo Personal'] || 0)
+  const kpiSla2 = computed(() => kpiBySla.value['Reemplazo'] || 0)
+
+  // 4. KPIs estructurados por Tipo (De Master, adaptado a snake_case)
+  const kpisPorTipo = computed(() => {
+    if (!filteredData.value || filteredData.value.length === 0) return {}
+
+    const configStore = useConfigStore()
+    const tiposActivos = configStore.tiposSolicitud
+      .filter(t => t.activo)
+      .map(t => t.nombre)
+
+    const kpis = {}
+
+    filteredData.value.forEach((record) => {
+      const tipo = record.tipo_solicitud || record.tipoSolicitud
+      if (!tipo || !tiposActivos.includes(tipo)) return
+
+      if (!kpis[tipo]) {
+        kpis[tipo] = {
+          total: 0,
+          cumplidos: 0,
+          diasUmbral: record.dias_umbral_sla || record.diasUmbralSla || 0
+        }
+      }
+
+      kpis[tipo].total++
+      
+      // Chequeo exhaustivo de cumplimiento
+      if (
+        record.cumple_sla1 || record.cumpleSla1 || 
+        record.cumple_sla2 || record.cumpleSla2 || 
+        record.cumpleSla === true
+      ) {
+        kpis[tipo].cumplidos++
+      }
+    })
+
+    Object.keys(kpis).forEach(tipo => {
+      const kpi = kpis[tipo]
+      kpi.porcentaje = kpi.total > 0 ? ((kpi.cumplidos / kpi.total) * 100).toFixed(2) : 0
+    })
+
+    return kpis
+  })
+
+  // 5. KPI de Eficacia Global
   const kpiEficacia = computed(() => {
     if (!filteredData.value || filteredData.value.length === 0) return 0
 
     const totalSolicitudes = filteredData.value.length
     const cumplidas = filteredData.value.filter((record) => {
-      if (record.tipo_solicitud === 'Nuevo Personal') {
-        return record.cumple_sla1 === true
-      } else if (record.tipo_solicitud === 'Reemplazo') {
-        return record.cumple_sla2 === true
-      }
-      return false
+      return (
+        record.cumpleSla === true || 
+        record.cumple_sla1 === true || record.cumpleSla1 === true ||
+        record.cumple_sla2 === true || record.cumpleSla2 === true
+      )
     }).length
 
     return ((cumplidas / totalSolicitudes) * 100).toFixed(2)
   })
 
-  // Datos agrupados por BLOQUE TECH para el gráfico (usando datos filtrados)
+  // --- GRÁFICOS ---
+  // Datos agrupados por BLOQUE TECH (Versión Feat para Reportes)
   const chartDataByRole = computed(() => {
     if (!filteredData.value || filteredData.value.length === 0) return []
 
@@ -141,20 +228,19 @@ export const useSlaStore = defineStore('sla', () => {
     const data = filteredData.value
 
     data.forEach((record) => {
-      const role = record.bloque_tech || 'Sin Especificar'
+      const role = record.bloque_tech || record.bloqueTech || 'Sin Especificar'
       if (!grouped[role]) grouped[role] = { role, totals: {}, cumplidos: {} }
 
-      const tipo = record.tipo_solicitud || 'Sin Tipo'
+      const tipo = record.tipo_solicitud || record.tipoSolicitud || 'Sin Tipo'
       grouped[role].totals[tipo] = (grouped[role].totals[tipo] || 0) + 1
 
-      // Solución dinámica: buscar CUALQUIER campo cumple_slaX que sea true
-      // El backend garantiza que solo el campo correcto estará en true según el tipo
-      // Ejemplo: "Nuevo Personal" → solo cumple_sla1 puede ser true
-      //          "Reemplazo" → solo cumple_sla2 puede ser true
-      const cumpleFields = Object.keys(record).filter(k => k.startsWith('cumple_sla'))
-      const cumpleAlguno = cumpleFields.some(field => record[field] === true)
-      
-      if (cumpleAlguno) {
+      // Buscar si cumple alguno de los SLAs asociados
+      const cumple = 
+        record.cumple_sla1 || record.cumpleSla1 || 
+        record.cumple_sla2 || record.cumpleSla2 ||
+        record.cumpleSla === true
+
+      if (cumple) {
         grouped[role].cumplidos[tipo] = (grouped[role].cumplidos[tipo] || 0) + 1
       }
     })
@@ -167,47 +253,48 @@ export const useSlaStore = defineStore('sla', () => {
         slaPercentages[tipo] = total > 0 ? ((cumpl / total) * 100).toFixed(2) : 0
       })
 
+      // Retornar formato enriquecido
       return {
         role: item.role,
         slaPercentages,
+        // Compatibilidad con Master si algún componente lo necesita plano
+        ...slaPercentages 
       }
     })
   })
 
-  // Acciones
+  // --- ACCIONES ---
+
   async function fetchSlaData() {
     loading.value = true
     error.value = null
 
     try {
-      // Pasar los filtros actuales al servicio para que la API aplique los mismos criterios
       const response = await slaService.getSlaData(filters.value || {})
-      // La API puede devolver { data: [...] } o directamente un arreglo.
       const items = Array.isArray(response) ? response : (response && response.data) ? response.data : []
 
-      // Normalizar campos para coincidir con los nombres usados en la UI (snake_case)
+      // Normalizar a snake_case (preferido por Feat) pero manteniendo compatibilidad
       const normalize = (r) => {
-        // soportar distintos estilos de casing: snake_case, camelCase y PascalCase
         return {
           id_solicitud: (r.id ?? r.idSolicitud ?? r.id_solicitud ?? r.Id ?? r.IdSolicitud ?? null),
           bloque_tech: (r.bloqueTech ?? r.BloqueTech ?? r.bloque_tech ?? r.bloque ?? null),
-          tipo_solicitud: (r.tipoSolicitud ?? r.TipoSolicitud ?? r.tipo_solicitud ?? r.tipo_solicitud ?? null),
+          tipo_solicitud: (r.tipoSolicitud ?? r.TipoSolicitud ?? r.tipo_solicitud ?? null),
           prioridad: (r.prioridad ?? r.Prioridad ?? null),
           fecha_solicitud: (r.fechaSolicitud ?? r.FechaSolicitud ?? r.fecha_solicitud ?? null),
           fecha_ingreso: (r.fechaIngreso ?? r.FechaIngreso ?? r.fecha_ingreso ?? null),
-          num_dias_sla: (r.numDiasSla ?? r.NumDiasSla ?? r.num_dias_sla ?? r.diasTranscurridos ?? r.DiasTranscurridos ?? null),
+          num_dias_sla: (r.numDiasSla ?? r.NumDiasSla ?? r.num_dias_sla ?? r.diasTranscurridos ?? null),
           cumple_sla1: (r.cumpleSla1 ?? r.CumpleSla1 ?? r.cumple_sla1 ?? false),
           cumple_sla2: (r.cumpleSla2 ?? r.CumpleSla2 ?? r.cumple_sla2 ?? false),
           nombre_personal: (r.nombrePersonal ?? r.NombrePersonal ?? r.nombre_personal ?? ''),
           dias_umbral_sla: (r.diasUmbralSla ?? r.DiasUmbralSla ?? r.dias_umbral_sla ?? 0),
-          // Mantener cualquier campo extra
-          __raw: r,
+          // Mantener raw para seguridad
+          ...r
         }
       }
 
       const normalized = items.map(normalize)
       slaData.value = normalized
-      allData.value = normalized // Guardamos una copia de los datos originales sin filtrar
+      allData.value = normalized 
     } catch (err) {
       error.value = err.message || 'Error al cargar los datos SLA'
       console.error('Error fetching SLA data:', err)
@@ -221,25 +308,23 @@ export const useSlaStore = defineStore('sla', () => {
     error.value = null
 
     try {
-      // Llamar al nuevo endpoint específico de reportes
       const response = await slaService.getDashboardDataForReports(reportFilters)
       const items = Array.isArray(response) ? response : (response && response.data) ? response.data : []
 
-      // Normalizar campos
+      // Misma normalización
       const normalize = (r) => {
         return {
-          id_solicitud: (r.id ?? r.idSolicitud ?? r.id_solicitud ?? r.Id ?? r.IdSolicitud ?? null),
-          bloque_tech: (r.bloqueTech ?? r.BloqueTech ?? r.bloque_tech ?? r.bloque ?? null),
+          id_solicitud: (r.id ?? r.idSolicitud ?? r.id_solicitud ?? r.Id ?? null),
+          bloque_tech: (r.bloqueTech ?? r.BloqueTech ?? r.bloque_tech ?? null),
           tipo_solicitud: (r.tipoSolicitud ?? r.TipoSolicitud ?? r.tipo_solicitud ?? null),
           prioridad: (r.prioridad ?? r.Prioridad ?? null),
           fecha_solicitud: (r.fechaSolicitud ?? r.FechaSolicitud ?? r.fecha_solicitud ?? null),
           fecha_ingreso: (r.fechaIngreso ?? r.FechaIngreso ?? r.fecha_ingreso ?? null),
-          num_dias_sla: (r.numDiasSla ?? r.NumDiasSla ?? r.num_dias_sla ?? r.diasTranscurridos ?? r.DiasTranscurridos ?? null),
+          num_dias_sla: (r.numDiasSla ?? r.NumDiasSla ?? r.num_dias_sla ?? null),
           cumple_sla1: (r.cumpleSla1 ?? r.CumpleSla1 ?? r.cumple_sla1 ?? false),
           cumple_sla2: (r.cumpleSla2 ?? r.CumpleSla2 ?? r.cumple_sla2 ?? false),
-          nombre_personal: (r.nombrePersonal ?? r.NombrePersonal ?? r.nombre_personal ?? ''),
           dias_umbral_sla: (r.diasUmbralSla ?? r.DiasUmbralSla ?? r.dias_umbral_sla ?? 0),
-          __raw: r,
+          ...r
         }
       }
 
@@ -259,10 +344,9 @@ export const useSlaStore = defineStore('sla', () => {
   async function uploadExcelFile(file) {
     loading.value = true
     error.value = null
-
     try {
       const response = await slaService.uploadExcel(file)
-      await fetchSlaData() // Recargar datos después de subir
+      await fetchSlaData() 
       return response
     } catch (err) {
       error.value = err.message || 'Error al cargar el archivo Excel'
@@ -275,18 +359,14 @@ export const useSlaStore = defineStore('sla', () => {
   async function createManualEntry(solicitud) {
     loading.value = true
     error.value = null
-
     try {
       const response = await slaService.createManualEntry(solicitud)
-
-      // Agregar la solicitud al array local de datos y a allData
       const newEntry = {
         id: response.data?.id || Date.now(),
         ...solicitud,
       }
       slaData.value.push(newEntry)
       allData.value.push(newEntry)
-
       return response
     } catch (err) {
       error.value = err.message || 'Error al crear la solicitud manual'
@@ -308,9 +388,9 @@ export const useSlaStore = defineStore('sla', () => {
     filters.value = {
       startDate: null,
       endDate: null,
-      bloqueTech: null,
-      tipoSolicitud: null,
-      prioridad: null,
+      bloqueTech: [],
+      tipoSolicitud: [],
+      prioridad: [],
       cumpleSla: null,
     }
   }
@@ -346,6 +426,9 @@ export const useSlaStore = defineStore('sla', () => {
     // Computados
     slaTypes,
     kpiBySla,
+    kpiSla1, // Legacy support
+    kpiSla2, // Legacy support
+    kpisPorTipo, // Legacy support
     kpiEficacia,
     chartDataByRole,
     filteredData,

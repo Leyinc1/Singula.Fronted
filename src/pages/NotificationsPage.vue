@@ -1,241 +1,284 @@
 <template>
   <q-page class="notifications-page" style="background-color: #fafafa">
     <div class="q-pa-md">
-      <!-- Encabezado -->
       <div class="row items-center q-mb-lg">
         <div class="col">
           <h4 class="text-h4 q-my-none text-weight-bold text-black">
             <q-icon name="notifications" class="q-mr-sm" />
-            Notificaciones y Recomendaciones
+            Notificaciones
           </h4>
           <p class="text-grey-8 q-mt-sm q-mb-none" style="font-weight: 400">
-            Alertas inteligentes y recomendaciones para mejorar el cumplimiento de SLAs
+            Alertas inteligentes para mejorar el cumplimiento de SLAs
           </p>
         </div>
+
         <div class="col-auto">
           <q-btn
             outline
             color="black"
             icon="mark_email_read"
-            label="Marcar Todo como Leído"
-            @click="markAllAsRead"
+            label="Marcar Incumplimientos Leídos"
+            @click="markAllIncumplimientos"
             style="border-width: 2px"
-          />
+            :disable="criticalAlerts.length === 0"
+          >
+            <q-tooltip>Limpia solo la lista roja</q-tooltip>
+          </q-btn>
         </div>
       </div>
 
       <div class="row q-col-gutter-md">
-        <!-- Columna Izquierda: Alertas Críticas y Recomendaciones -->
-        <div class="col-12 col-md-8">
-          <!-- Alertas Críticas -->
-          <q-card class="tata-card q-mb-md">
-            <q-card-section class="bg-negative text-white">
-              <div class="text-h6 text-weight-bold">
-                <q-icon name="error" class="q-mr-sm" />
-                Alertas Críticas
-                <q-badge color="white" text-color="negative" class="q-ml-sm">
-                  {{ criticalAlerts.length }}
-                </q-badge>
-              </div>
-            </q-card-section>
+        <div class="col-12 col-md-8 column q-gutter-y-md">
+          <div v-if="loading" class="row justify-center q-py-lg" style="order: 0">
+            <q-spinner color="primary" size="3em" />
+            <div class="text-grey q-ml-sm self-center">Cargando alertas...</div>
+          </div>
 
-            <q-separator />
+          <div
+            v-if="!loading && criticalAlerts.length === 0 && warnings.length === 0"
+            class="text-center q-pa-xl full-width"
+            style="order: 0"
+          >
+            <q-icon name="check_circle" size="80px" color="positive" />
+            <div class="text-h5 q-mt-md text-grey-8">¡Todo al día!</div>
+            <div class="text-grey-6">No tienes alertas pendientes.</div>
+          </div>
 
-            <q-card-section v-if="criticalAlerts.length === 0" class="text-center q-pa-lg">
-              <q-icon name="check_circle" size="64px" color="positive" class="q-mb-md" />
-              <div class="text-h6 text-grey-7">No hay alertas críticas</div>
-              <div class="text-caption text-grey-6">
-                Todos los indicadores están dentro del rango aceptable
-              </div>
-            </q-card-section>
-
-            <q-list v-else separator>
-              <q-item
-                v-for="alert in criticalAlerts"
-                :key="alert.id"
-                clickable
-                v-ripple
-                @click="viewAlertDetails(alert)"
-              >
-                <q-item-section avatar>
-                  <q-avatar :color="alert.color" text-color="white" :icon="alert.icon" />
-                </q-item-section>
-
-                <q-item-section>
-                  <q-item-label class="text-weight-bold">{{ alert.title }}</q-item-label>
-                  <q-item-label caption class="text-grey-8">
-                    {{ alert.description }}
-                  </q-item-label>
-                  <q-item-label caption class="text-grey-6 q-mt-xs">
-                    <q-icon name="access_time" size="xs" />
-                    {{ alert.time }}
-                  </q-item-label>
-                </q-item-section>
-
-                <q-item-section side>
-                  <q-btn
-                    flat
-                    round
-                    dense
-                    icon="close"
-                    color="grey-7"
-                    @click.stop="dismissAlert(alert.id)"
-                  >
-                    <q-tooltip>Descartar</q-tooltip>
-                  </q-btn>
-                </q-item-section>
-              </q-item>
-            </q-list>
-          </q-card>
-
-          <!-- Recomendaciones Inteligentes -->
-          <q-card class="tata-card q-mb-md">
-            <q-card-section class="bg-black text-white">
-              <div class="text-h6 text-weight-bold">
-                <q-icon name="auto_awesome" class="q-mr-sm" />
-                Recomendaciones Inteligentes
-              </div>
-            </q-card-section>
-
-            <q-separator />
-
-            <q-card-section>
-              <q-timeline color="black">
-                <q-timeline-entry
-                  v-for="recommendation in recommendations"
-                  :key="recommendation.id"
-                  :title="recommendation.title"
-                  :subtitle="recommendation.subtitle"
-                  :icon="recommendation.icon"
-                >
-                  <div class="text-body2 q-mb-md">
-                    {{ recommendation.description }}
-                  </div>
-
-                  <div class="row q-gutter-sm">
-                    <q-chip
-                      v-for="tag in recommendation.tags"
-                      :key="tag"
-                      dense
-                      outline
-                      color="black"
-                      size="sm"
-                    >
-                      {{ tag }}
-                    </q-chip>
-                  </div>
-
-                  <q-separator class="q-my-md" />
-
-                  <div class="row q-gutter-sm">
-                    <q-btn
-                      flat
-                      dense
-                      color="black"
-                      icon="info"
-                      label="Más información"
-                      size="sm"
-                      @click="showRecommendationDetails(recommendation)"
-                    />
-                    <q-btn
-                      flat
-                      dense
-                      color="positive"
-                      icon="check"
-                      label="Aplicar"
-                      size="sm"
-                      @click="applyRecommendation(recommendation)"
-                    />
-                  </div>
-                </q-timeline-entry>
-              </q-timeline>
-            </q-card-section>
-          </q-card>
-
-          <!-- Advertencias -->
-          <q-card class="tata-card">
-            <q-card-section class="bg-warning text-white">
-              <div class="text-h6 text-weight-bold">
-                <q-icon name="warning" class="q-mr-sm" />
-                Advertencias
-                <q-badge color="white" text-color="warning" class="q-ml-sm">
-                  {{ warnings.length }}
-                </q-badge>
-              </div>
-            </q-card-section>
-
-            <q-separator />
-
-            <q-list separator>
-              <q-item v-for="warning in warnings" :key="warning.id" clickable v-ripple>
-                <q-item-section avatar>
-                  <q-icon :name="warning.icon" color="warning" size="md" />
-                </q-item-section>
-
-                <q-item-section>
-                  <q-item-label class="text-weight-medium">{{ warning.title }}</q-item-label>
-                  <q-item-label caption class="text-grey-8">
-                    {{ warning.description }}
-                  </q-item-label>
-                </q-item-section>
-
-                <q-item-section side>
-                  <q-badge
-                    :color="warning.severity === 'high' ? 'warning' : 'grey-6'"
-                    text-color="white"
-                  >
-                    {{ warning.severity === 'high' ? 'Alta' : 'Media' }}
+          <div
+            v-if="criticalAlerts.length > 0"
+            :style="{ order: primaryView === 'incumplimiento' ? 1 : 2 }"
+            class="transition-order"
+          >
+            <q-card class="tata-card">
+              <q-card-section class="bg-negative text-white">
+                <div class="text-h6 text-weight-bold">
+                  <q-icon name="error" class="q-mr-sm" />
+                  Incumplimiento de SLA
+                  <q-badge color="white" text-color="negative" class="q-ml-sm">
+                    {{ criticalAlerts.length }}
                   </q-badge>
-                </q-item-section>
-              </q-item>
-            </q-list>
-          </q-card>
+                </div>
+              </q-card-section>
+              <q-separator />
+              <q-list separator>
+                <q-item
+                  v-for="alert in criticalAlerts"
+                  :key="alert.id"
+                  clickable
+                  v-ripple
+                  class="q-py-md"
+                  @click="viewAlertDetails(alert)"
+                >
+                  <q-item-section avatar top>
+                    <q-avatar
+                      color="red-1"
+                      text-color="negative"
+                      icon="cancel"
+                      font-size="24px"
+                      size="40px"
+                    />
+                  </q-item-section>
+                  <q-item-section>
+                    <div class="row items-center justify-between q-mb-xs">
+                      <div class="text-subtitle1 text-weight-bold text-negative">
+                        {{ alert.title }}
+                      </div>
+                      <q-badge
+                        rounded
+                        color="negative"
+                        :label="`${alert.daysOverdue} días`"
+                        class="q-py-xs q-px-sm text-caption text-weight-bold"
+                      />
+                    </div>
+                    <div class="column q-gutter-y-xs q-mb-sm">
+                      <div class="row items-center text-grey-9 text-caption">
+                        <q-icon name="person" size="16px" class="q-mr-xs text-grey-6" /><span
+                          class="text-weight-bold q-mr-xs"
+                          >Rol:</span
+                        >
+                        {{ alert.role }}
+                      </div>
+                      <div class="row items-center text-grey-9 text-caption">
+                        <q-icon name="event" size="16px" class="q-mr-xs text-grey-6" /><span
+                          class="text-weight-bold q-mr-xs"
+                          >Fecha solicitud:</span
+                        >
+                        {{ alert.requestDate }}
+                      </div>
+                      <div class="row items-center text-grey-9 text-caption">
+                        <q-icon name="event_note" size="16px" class="q-mr-xs text-grey-6" /><span
+                          class="text-weight-bold q-mr-xs"
+                          >Creación de SLA:</span
+                        >
+                        {{ alert.creationDateSla }}
+                      </div>
+                      <div class="row items-center text-grey-9 text-caption">
+                        <q-icon name="schedule" size="16px" class="q-mr-xs text-grey-6" /><span
+                          class="text-weight-bold q-mr-xs"
+                          >Límite:</span
+                        >
+                        {{ alert.limit }}
+                      </div>
+                    </div>
+                    <q-item-label caption class="text-grey-6">{{ alert.description }}</q-item-label>
+                  </q-item-section>
+
+                  <q-item-section side top>
+                    <q-btn
+                      flat
+                      round
+                      dense
+                      icon="close"
+                      color="grey-7"
+                      @click.stop="dismissAlert(alert.id)"
+                    >
+                      <q-tooltip>Marcar como leído</q-tooltip>
+                    </q-btn>
+                  </q-item-section>
+                </q-item>
+              </q-list>
+            </q-card>
+          </div>
+
+          <div
+            v-if="warnings.length > 0"
+            :style="{ order: primaryView === 'riesgo' ? 1 : 2 }"
+            class="transition-order"
+          >
+            <q-card class="tata-card">
+              <q-card-section class="text-white" style="background-color: #f57c00">
+                <div class="text-h6 text-weight-bold">
+                  <q-icon name="warning" class="q-mr-sm" />
+                  Riesgo
+                  <q-badge color="white" text-color="orange-9" class="q-ml-sm">
+                    {{ warnings.length }}
+                  </q-badge>
+                </div>
+              </q-card-section>
+              <q-separator />
+              <q-list separator>
+                <q-item
+                  v-for="warning in warnings"
+                  :key="warning.id"
+                  clickable
+                  v-ripple
+                  class="q-py-md"
+                  @click="viewAlertDetails(warning)"
+                >
+                  <q-item-section avatar top>
+                    <q-avatar
+                      color="orange-1"
+                      text-color="orange-9"
+                      icon="trending_down"
+                      font-size="24px"
+                      size="40px"
+                    />
+                  </q-item-section>
+                  <q-item-section>
+                    <div class="row items-start justify-between q-mb-sm">
+                      <div class="text-subtitle1 text-weight-bold text-black col">
+                        {{ warning.title }}
+                      </div>
+                      <div class="col-auto">
+                        <q-badge
+                          rounded
+                          style="background-color: #ef6c00"
+                          class="q-py-xs q-px-sm text-caption text-weight-bold text-white"
+                        >
+                          <q-icon name="schedule" class="q-mr-xs" /> -{{ warning.daysRemaining }}
+                          días
+                        </q-badge>
+                      </div>
+                    </div>
+                    <div class="column q-gutter-y-xs q-mb-sm">
+                      <div class="row items-center text-grey-8 text-caption">
+                        <q-icon name="person" size="16px" class="q-mr-xs text-grey-6" /><span
+                          class="text-weight-bold q-mr-xs"
+                          >Rol:</span
+                        >
+                        {{ warning.role }}
+                      </div>
+                      <div class="row items-center text-grey-8 text-caption">
+                        <q-icon
+                          name="event_available"
+                          size="16px"
+                          class="q-mr-xs text-grey-6"
+                        /><span class="text-weight-bold q-mr-xs">Fecha solicitud:</span>
+                        {{ warning.requestDate }}
+                      </div>
+                      <div class="row items-center text-grey-8 text-caption">
+                        <q-icon name="timelapse" size="16px" class="q-mr-xs text-grey-6" /><span
+                          class="text-weight-bold q-mr-xs"
+                          >Límite de días:</span
+                        >
+                        {{ warning.limit }}
+                      </div>
+                      <div class="row items-center text-grey-8 text-caption">
+                        <q-icon
+                          name="hourglass_empty"
+                          size="16px"
+                          class="q-mr-xs text-grey-6"
+                        /><span class="text-weight-bold q-mr-xs">Días restantes:</span>
+                        {{ warning.daysRemaining }} días
+                      </div>
+                    </div>
+                    <q-item-label caption class="text-grey-7 q-mt-xs">{{
+                      warning.description
+                    }}</q-item-label>
+                  </q-item-section>
+
+                  <q-item-section side top>
+                    <q-btn
+                      flat
+                      round
+                      dense
+                      icon="close"
+                      color="grey-7"
+                      @click.stop="dismissAlert(warning.id)"
+                    >
+                      <q-tooltip>Marcar como leído</q-tooltip>
+                    </q-btn>
+                  </q-item-section>
+                </q-item>
+              </q-list>
+            </q-card>
+          </div>
         </div>
 
-        <!-- Columna Derecha: Resumen y Configuración -->
         <div class="col-12 col-md-4">
-          <!-- Resumen de Notificaciones -->
           <q-card class="tata-card q-mb-md">
             <q-card-section class="bg-black text-white">
               <div class="text-h6 text-weight-bold">
-                <q-icon name="bar_chart" class="q-mr-sm" />
-                Resumen
+                <q-icon name="bar_chart" class="q-mr-sm" /> Resumen
               </div>
             </q-card-section>
-
             <q-separator />
-
             <q-card-section>
               <div class="q-mb-lg">
-                <div class="row items-center justify-between q-mb-sm">
-                  <span class="text-body2 text-grey-8">Críticas</span>
+                <div
+                  class="row items-center justify-between q-mb-sm summary-row"
+                  @click="primaryView = 'incumplimiento'"
+                  :class="{ active: primaryView === 'incumplimiento' }"
+                >
+                  <span class="text-body2 text-grey-8">Incumplimiento De SLA</span>
                   <span class="text-h6 text-weight-bold text-negative">{{
                     criticalAlerts.length
                   }}</span>
                 </div>
                 <q-linear-progress :value="criticalAlerts.length / 10" color="negative" />
               </div>
-
               <div class="q-mb-lg">
-                <div class="row items-center justify-between q-mb-sm">
-                  <span class="text-body2 text-grey-8">Advertencias</span>
+                <div
+                  class="row items-center justify-between q-mb-sm summary-row"
+                  @click="primaryView = 'riesgo'"
+                  :class="{ active: primaryView === 'riesgo' }"
+                >
+                  <span class="text-body2 text-grey-8">Riesgo</span>
                   <span class="text-h6 text-weight-bold text-warning">{{ warnings.length }}</span>
                 </div>
                 <q-linear-progress :value="warnings.length / 10" color="warning" />
               </div>
-
-              <div class="q-mb-lg">
-                <div class="row items-center justify-between q-mb-sm">
-                  <span class="text-body2 text-grey-8">Recomendaciones</span>
-                  <span class="text-h6 text-weight-bold text-black">{{
-                    recommendations.length
-                  }}</span>
-                </div>
-                <q-linear-progress :value="recommendations.length / 10" color="black" />
-              </div>
-
               <q-separator class="q-my-md" />
-
               <div class="text-center">
                 <div class="text-caption text-grey-7">Última actualización</div>
                 <div class="text-body2 text-weight-medium text-black">{{ lastUpdate }}</div>
@@ -243,96 +286,12 @@
             </q-card-section>
           </q-card>
 
-          <!-- Configuración de Notificaciones -->
-          <q-card class="tata-card q-mb-md">
-            <q-card-section class="bg-black text-white">
-              <div class="text-h6 text-weight-bold">
-                <q-icon name="settings" class="q-mr-sm" />
-                Configuración
-              </div>
-            </q-card-section>
-
-            <q-separator />
-
-            <q-card-section>
-              <div class="text-subtitle2 text-weight-medium text-black q-mb-md">
-                Preferencias de Alertas
-              </div>
-
-              <q-list>
-                <q-item tag="label">
-                  <q-item-section>
-                    <q-item-label>Notificaciones Email</q-item-label>
-                    <q-item-label caption>Recibir alertas por correo</q-item-label>
-                  </q-item-section>
-                  <q-item-section side>
-                    <q-toggle v-model="settings.emailNotifications" color="black" />
-                  </q-item-section>
-                </q-item>
-
-                <q-item tag="label">
-                  <q-item-section>
-                    <q-item-label>Alertas en Tiempo Real</q-item-label>
-                    <q-item-label caption>Notificaciones push</q-item-label>
-                  </q-item-section>
-                  <q-item-section side>
-                    <q-toggle v-model="settings.pushNotifications" color="black" />
-                  </q-item-section>
-                </q-item>
-
-                <q-item tag="label">
-                  <q-item-section>
-                    <q-item-label>Solo Críticas</q-item-label>
-                    <q-item-label caption>Filtrar advertencias menores</q-item-label>
-                  </q-item-section>
-                  <q-item-section side>
-                    <q-toggle v-model="settings.criticalOnly" color="black" />
-                  </q-item-section>
-                </q-item>
-              </q-list>
-
-              <q-separator class="q-my-md" />
-
-              <div class="text-subtitle2 text-weight-medium text-black q-mb-md">
-                Umbral de Alertas
-              </div>
-
-              <q-slider
-                v-model="settings.threshold"
-                :min="60"
-                :max="95"
-                :step="5"
-                label
-                label-always
-                color="black"
-                class="q-mb-md"
-              />
-              <div class="text-caption text-grey-7 text-center">
-                Alertar cuando el SLA caiga por debajo del {{ settings.threshold }}%
-              </div>
-
-              <q-btn
-                color="black"
-                label="Guardar Configuración"
-                icon="save"
-                unelevated
-                class="full-width q-mt-md"
-                @click="saveSettings"
-              />
-            </q-card-section>
-          </q-card>
-
-          <!-- Acciones Rápidas -->
           <q-card class="tata-card">
             <q-card-section class="bg-black text-white">
               <div class="text-h6 text-weight-bold">
-                <q-icon name="flash_on" class="q-mr-sm" />
-                Acciones Rápidas
+                <q-icon name="flash_on" class="q-mr-sm" /> Acciones Rápidas
               </div>
             </q-card-section>
-
-            <q-separator />
-
             <q-card-section>
               <q-btn
                 outline
@@ -343,7 +302,6 @@
                 style="border-width: 2px"
                 @click="$router.push('/')"
               />
-
               <q-btn
                 outline
                 color="black"
@@ -353,12 +311,11 @@
                 style="border-width: 2px"
                 @click="$router.push('/predictive')"
               />
-
               <q-btn
                 outline
                 color="black"
                 icon="assessment"
-                label="Generar Reporte"
+                label="Informes"
                 class="full-width"
                 style="border-width: 2px"
                 @click="$router.push('/reports')"
@@ -372,91 +329,21 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
+import { useNotificationStore } from 'stores/notification-store'
 
 const $q = useQuasar()
+const store = useNotificationStore()
 
-const criticalAlerts = ref([
-  {
-    id: 1,
-    title: 'SLA1 por debajo del umbral crítico',
-    description:
-      'El cumplimiento del SLA1 (Nuevo Personal) está en 76.2%, por debajo del objetivo del 80%',
-    time: 'Hace 15 minutos',
-    icon: 'error',
-    color: 'negative',
-  },
-  {
-    id: 2,
-    title: 'Incremento en solicitudes de prioridad crítica',
-    description:
-      'Se detectó un aumento del 45% en solicitudes con prioridad crítica en las últimas 48 horas',
-    time: 'Hace 1 hora',
-    icon: 'priority_high',
-    color: 'negative',
-  },
-])
+const criticalAlerts = computed(() => store.criticalAlerts)
+const warnings = computed(() => store.warnings)
+const loading = computed(() => store.loading)
 
-const warnings = ref([
-  {
-    id: 1,
-    title: 'Tendencia a la baja en SLA2',
-    description: 'El SLA2 muestra una tendencia descendente en los últimos 7 días',
-    icon: 'trending_down',
-    severity: 'high',
-  },
-  {
-    id: 2,
-    title: 'Carga de trabajo desbalanceada',
-    description: 'El equipo de Backend tiene 60% más solicitudes que otros equipos',
-    icon: 'balance',
-    severity: 'medium',
-  },
-  {
-    id: 3,
-    title: 'Retrasos en solicitudes antiguas',
-    description: '8 solicitudes llevan más de 30 días sin resolución',
-    icon: 'schedule',
-    severity: 'high',
-  },
-])
+const primaryView = ref('incumplimiento')
 
-const recommendations = ref([
-  {
-    id: 1,
-    title: 'Optimizar proceso de reclutamiento',
-    subtitle: 'Recomendación basada en análisis de datos',
-    description:
-      'Se recomienda reducir el tiempo de revisión de CVs en un 30% para mejorar el SLA1. Considera implementar filtros automáticos.',
-    icon: 'lightbulb',
-    tags: ['Eficiencia', 'Automatización', 'SLA1'],
-  },
-  {
-    id: 2,
-    title: 'Redistribuir carga de trabajo',
-    subtitle: 'Acción sugerida',
-    description:
-      'Reasignar 15 solicitudes del equipo Backend a Frontend para balancear la carga y mejorar tiempos de respuesta.',
-    icon: 'swap_horiz',
-    tags: ['Balance', 'Recursos', 'Urgente'],
-  },
-  {
-    id: 3,
-    title: 'Priorizar solicitudes antiguas',
-    subtitle: 'Mejora del servicio',
-    description:
-      'Crear un sprint dedicado para resolver las 8 solicitudes que exceden los 30 días de antigüedad.',
-    icon: 'flag',
-    tags: ['Deuda Técnica', 'SLA', 'Planificación'],
-  },
-])
-
-const settings = ref({
-  emailNotifications: true,
-  pushNotifications: true,
-  criticalOnly: false,
-  threshold: 80,
+onMounted(() => {
+  store.fetchAlerts()
 })
 
 const lastUpdate = computed(() => {
@@ -464,71 +351,36 @@ const lastUpdate = computed(() => {
   return now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
 })
 
-function dismissAlert(id) {
-  const index = criticalAlerts.value.findIndex((alert) => alert.id === id)
-  if (index !== -1) {
-    criticalAlerts.value.splice(index, 1)
-    $q.notify({
-      type: 'info',
-      message: 'Alerta descartada',
-      position: 'top',
-    })
+async function dismissAlert(id) {
+  const success = await store.markAsRead(id)
+  if (success) {
+    $q.notify({ type: 'positive', message: 'Alerta archivada', position: 'top', timeout: 1000 })
+  } else {
+    $q.notify({ type: 'negative', message: 'Error al archivar', position: 'top' })
   }
 }
 
-function markAllAsRead() {
-  criticalAlerts.value = []
-  $q.notify({
-    type: 'positive',
-    message: 'Todas las alertas marcadas como leídas',
-    position: 'top',
-    icon: 'check_circle',
-  })
+// --- FUNCIÓN DEL BOTÓN "MARCAR INCUMPLIMIENTOS" ---
+async function markAllIncumplimientos() {
+  const success = await store.markAllIncumplimientosRead()
+  if (success) {
+    $q.notify({
+      type: 'positive',
+      message: 'Incumplimientos marcados como leídos',
+      position: 'top',
+      icon: 'check_circle',
+    })
+  } else {
+    $q.notify({ type: 'negative', message: 'No se pudo completar la acción', position: 'top' })
+  }
 }
 
 function viewAlertDetails(alert) {
   $q.dialog({
     title: alert.title,
-    message: alert.description,
+    message: `Rol: ${alert.role} <br> Fecha: ${alert.requestDate}`,
     html: true,
-    ok: {
-      label: 'Entendido',
-      color: 'black',
-      flat: true,
-    },
-  })
-}
-
-function showRecommendationDetails(recommendation) {
-  $q.dialog({
-    title: recommendation.title,
-    message: recommendation.description,
-    html: true,
-    ok: {
-      label: 'Cerrar',
-      color: 'black',
-      flat: true,
-    },
-  })
-}
-
-function applyRecommendation(recommendation) {
-  $q.notify({
-    type: 'positive',
-    message: 'Recomendación aplicada',
-    caption: `La acción "${recommendation.title}" ha sido programada`,
-    position: 'top',
-    icon: 'check_circle',
-  })
-}
-
-function saveSettings() {
-  $q.notify({
-    type: 'positive',
-    message: 'Configuración guardada',
-    caption: 'Tus preferencias han sido actualizadas',
-    position: 'top',
-    icon: 'save',
+    ok: { label: 'Cerrar', color: 'black', flat: true },
   })
 }
 </script>
@@ -536,5 +388,26 @@ function saveSettings() {
 <style scoped lang="scss">
 .notifications-page {
   background-color: #f5f5f5;
+}
+.tata-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+}
+.summary-row {
+  cursor: pointer;
+  padding: 8px 10px;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+  border: 1px solid transparent;
+}
+.summary-row:hover {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+.summary-row.active {
+  background-color: #e3f2fd;
+  border-color: #2196f3;
+}
+.transition-order {
+  transition: order 0.5s ease;
 }
 </style>
