@@ -4,9 +4,17 @@
  */
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import apiClient from 'src/services/api'
+import { useSlaStore } from './slaStore'
 
 export const useAuthStore = defineStore('auth', () => {
   // Estado reactivo
+  // Si en localStorage existe un token mock (generado por versiones antiguas), lo eliminamos
+  const storedToken = localStorage.getItem('token') || null
+  if (storedToken && storedToken.startsWith && storedToken.startsWith('mock-jwt-token-')) {
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+  }
   const token = ref(localStorage.getItem('token') || null)
   const user = ref(null)
 
@@ -26,25 +34,86 @@ export const useAuthStore = defineStore('auth', () => {
   const userName = computed(() => user.value?.name || 'Usuario')
 
   // Acciones
-  function login(credentials) {
-    // Simulación de login (en producción, llamar al backend)
-    // Por ahora, guardamos datos mock
-    const mockToken = 'mock-jwt-token-' + Date.now()
-    const mockUser = {
-      id: 1,
-      name: credentials.username || 'Admin',
-      email: credentials.email || 'admin@tcs.com',
-      role: 'admin',
+  async function login(credentials) {
+    // credentials: { username, password, rememberMe }
+    const payload = {
+      Username: credentials.username,
+      Password: credentials.password,
     }
 
-    token.value = mockToken
-    user.value = mockUser
+    try {
+      const resp = await apiClient.post('/usuarios/authenticate', payload)
+      const serverToken = resp.data?.token
+      if (!serverToken) throw new Error('No se recibió token del servidor')
 
-    // Guardar en localStorage
-    localStorage.setItem('token', mockToken)
-    localStorage.setItem('user', JSON.stringify(mockUser))
+      // Guardar token en store y localStorage
+      setToken(serverToken)
 
-    return Promise.resolve({ token: mockToken, user: mockUser })
+      // Intentar decodificar JWT para obtener datos del usuario
+      let parsedUser = null
+      try {
+        const parts = serverToken.split('.')
+        if (parts.length === 3) {
+          const payloadJson = atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'))
+          const claims = JSON.parse(payloadJson)
+          
+          console.log('JWT Claims decodificados:', claims)
+          
+          // Intentar extraer ID de múltiples posibles ubicaciones
+          const possibleIds = [
+            claims.UserId,
+            claims.userId, 
+            claims.sub,
+            claims.User_Id,
+            claims['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier']
+          ]
+          
+          const extractedId = possibleIds.find(id => id != null && id !== undefined)
+          const parsedId = extractedId ? parseInt(extractedId, 10) : null
+          
+          console.log('ID extraído del JWT:', parsedId)
+          
+          parsedUser = {
+            id: parsedId,
+            name:
+              claims.name ||
+              claims['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'] ||
+              claims.unique_name ||
+              null,
+            email:
+              claims.email ||
+              claims['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] ||
+              null,
+            role: claims.role || claims['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || null,
+          }
+        }
+      } catch (err) {
+        console.warn('No se pudo decodificar JWT para extraer usuario:', err)
+      }
+
+      // Si obtuvimos id, solicitar al backend el usuario completo
+      if (parsedUser?.id) {
+        try {
+          const userResp = await apiClient.get(`/usuarios/${parsedUser.id}`)
+          setUser(userResp.data)
+          return { token: serverToken, user: userResp.data }
+        } catch (fetchErr) {
+          console.warn('No se pudo obtener usuario por id:', fetchErr)
+          // si falla, conservar los datos parseados
+          setUser(parsedUser)
+          return { token: serverToken, user: parsedUser }
+        }
+      }
+
+      // Si no hay id, simplemente guardar lo parseado (o request adicional si hace falta)
+      if (parsedUser) setUser(parsedUser)
+
+      return { token: serverToken, user: parsedUser }
+    } catch (err) {
+      // Propagar mensaje amigable
+      const message = err.response?.data?.message || err.message || 'Error al autenticar'
+      throw new Error(message)
+    }
   }
 
   function logout() {
@@ -54,6 +123,10 @@ export const useAuthStore = defineStore('auth', () => {
     // Limpiar localStorage
     localStorage.removeItem('token')
     localStorage.removeItem('user')
+    
+    // Resetear estado de reportes al cerrar sesión
+    const slaStore = useSlaStore()
+    slaStore.resetReportsInitialization()
   }
 
   function setToken(newToken) {

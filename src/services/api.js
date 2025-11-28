@@ -1,78 +1,59 @@
-/**
- * Instancia central de Axios
- * Configura interceptores y base URL para todas las peticiones API
- */
 import axios from 'axios'
 import { useAuthStore } from 'src/stores/authStore'
 
 // URL base del backend - ajustar según el entorno
 const API_BASE_URL = process.env.VUE_APP_API_URL || 'http://localhost:5000/api'
 
-// Crear instancia de axios
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
   },
 })
 
-// Interceptor para agregar el token a cada petición
+// Attach token from auth store (accessing inside interceptor to avoid SSR issues)
 apiClient.interceptors.request.use(
   (config) => {
-    const authStore = useAuthStore()
-
-    if (authStore.token) {
-      config.headers.Authorization = `Bearer ${authStore.token}`
+    try {
+      const authStore = useAuthStore()
+      const token = authStore?.token || localStorage.getItem('token')
+      if (token) config.headers.Authorization = `Bearer ${token}`
+    } catch {
+      // pinia may not be initialized in some contexts; fallback to localStorage
+      const token = localStorage.getItem('token')
+      if (token) config.headers.Authorization = `Bearer ${token}`
     }
-
     return config
   },
-  (error) => {
-    return Promise.reject(error)
-  },
+  (error) => Promise.reject(error),
 )
 
-// Interceptor para manejar respuestas y errores
 apiClient.interceptors.response.use(
-  (response) => {
-    return response
-  },
+  (response) => response,
   (error) => {
-    // Manejar errores comunes
     if (error.response) {
-      switch (error.response.status) {
-        case 401: {
-          // Token expirado o inválido
-          // TODO: En producción, descomentar el logout y redirect
-          console.warn('401 Unauthorized - Usando modo mock para desarrollo')
-          // const authStore = useAuthStore()
-          // authStore.logout()
-
-          // Solo redirigir si no estamos ya en páginas públicas
-          // const currentPath = window.location.hash
-          // if (!currentPath.includes('/login') && !currentPath.includes('/config')) {
-          //   window.location.href = '/#/login'
-          // }
-          break
+      const status = error.response.status
+      if (status === 401) {
+        try {
+          const authStore = useAuthStore()
+          if (authStore?.logout) authStore.logout()
+        } catch (err) {
+          console.warn('Auth store logout failed', err)
         }
-        case 403:
-          console.error('Acceso prohibido')
-          break
-        case 404:
-          console.error('Recurso no encontrado')
-          break
-        case 500:
-          console.error('Error interno del servidor')
-          break
-        default:
-          console.error('Error en la petición:', error.response.status)
+        // redirect to login
+        window.location.href = '/#/login'
       }
     } else if (error.request) {
       console.error('No se recibió respuesta del servidor')
     } else {
       console.error('Error al configurar la petición:', error.message)
+    }
+
+    if (!error.response) {
+      error.message = 'No se recibió respuesta del servidor'
     }
 
     return Promise.reject(error)

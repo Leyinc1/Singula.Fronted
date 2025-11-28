@@ -5,6 +5,7 @@
 import apiClient from './api'
 
 // ==================== DATOS MOCKEADOS ====================
+// Conservados de master porque createManualEntry los utiliza
 // TODO: Remover cuando la autenticación esté implementada
 const MOCK_AREAS = [
   { idArea: 1, nombreArea: 'Backend', descripcion: 'Desarrollo Backend', activo: true },
@@ -28,7 +29,6 @@ const MOCK_SLAS = [
   { idSla: 1, codigoSla: 'SLA-NUEVO-001', descripcion: 'SLA Nuevo Personal', diasMaximo: 30 },
   { idSla: 2, codigoSla: 'SLA-REEMPLAZO-001', descripcion: 'SLA Reemplazo', diasMaximo: 15 },
 ]
-
 // ==================== FIN DATOS MOCKEADOS ====================
 
 export const slaService = {
@@ -41,18 +41,27 @@ export const slaService = {
     try {
       const params = {}
 
+      // Lógica de feat/Reportes: camelCase y manejo específico de filtros
       if (filters.startDate) params.startDate = filters.startDate
       if (filters.endDate) params.endDate = filters.endDate
-      if (filters.bloqueTech) params.bloqueTech = filters.bloqueTech
+      
+      // NOTA: bloqueTech se filtra localmente en el store (no se envía al backend) para permitir selección múltiple
+      // if (filters.bloqueTech) params.bloqueTech = filters.bloqueTech
+      
       if (filters.tipoSolicitud) params.tipoSolicitud = filters.tipoSolicitud
       if (filters.prioridad) params.prioridad = filters.prioridad
-      if (filters.cumpleSla !== undefined) params.cumpleSla = filters.cumpleSla
+      
+      if (typeof filters.cumpleSla !== 'undefined' && filters.cumpleSla !== null) {
+        // Conversión explícita para el backend: 'cumple' => true, 'no_cumple' => false
+        if (filters.cumpleSla === 'cumple') params.cumpleSla = true
+        else if (filters.cumpleSla === 'no_cumple') params.cumpleSla = false
+      }
 
       const response = await apiClient.get('/dashboard/sla/data', { params })
       return response.data
     } catch (error) {
-      console.error('Error al obtener datos SLA:', error)
-      throw error
+      console.error('Error al obtener datos SLA del servidor:', error)
+      throw new Error(`No se pudieron cargar los datos de la base de datos: ${error.message}. Por favor, verifica que el servidor está en ejecución.`)
     }
   },
 
@@ -172,6 +181,30 @@ export const slaService = {
     } catch (error) {
       console.error('Error al obtener filtros disponibles:', error)
       throw error
+    }
+  },
+
+  /**
+   * Obtener datos de dashboard específicos para reportes
+   * Filtra por fecha de INGRESO y permite múltiples bloques tech (filtrado en frontend)
+   * @param {Object} filters - Filtros para reportes (startDate, endDate, tipoSolicitud)
+   * @returns {Promise} - Promesa con los datos SLA
+   */
+  async getDashboardDataForReports(filters = {}) {
+    try {
+      const params = {}
+
+      // Enviar fechas y tipo de solicitud al backend
+      if (filters.startDate) params.startDate = filters.startDate
+      if (filters.endDate) params.endDate = filters.endDate
+      if (filters.tipoSolicitud) params.tipoSolicitud = filters.tipoSolicitud
+
+      // NO enviar bloqueTech - se filtra en frontend para permitir múltiples selecciones
+      const response = await apiClient.get('/Reporte/dashboard-data', { params })
+      return response.data
+    } catch (error) {
+      console.error('Error al obtener datos de dashboard para reportes:', error)
+      throw new Error(`No se pudieron cargar los datos: ${error.message}`)
     }
   },
 }
