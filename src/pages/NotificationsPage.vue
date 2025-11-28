@@ -14,6 +14,17 @@
 
         <div class="col-auto">
           <q-btn
+            flat
+            color="primary"
+            icon="email"
+            label="Config. Email"
+            @click="$router.push('/notification-email')"
+            class="q-mr-sm"
+          >
+            <q-tooltip>Configurar notificaciones por correo</q-tooltip>
+          </q-btn>
+
+          <q-btn
             outline
             color="black"
             icon="mark_email_read"

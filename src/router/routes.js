@@ -38,6 +38,11 @@ const routes = [
         component: () => import('pages/NotificationsPage.vue'),
       },
       {
+        path: 'notification-email',
+        name: 'notification-email',
+        component: () => import('pages/NotificacionEmailPage.vue'),
+      },
+      {
         path: 'profile',
         name: 'profile',
         component: () => import('pages/ProfilePage.vue'),
