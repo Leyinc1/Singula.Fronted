@@ -1,31 +1,22 @@
 import { defineBoot } from '#q-app/wrappers'
 import axios from 'axios'
 
-<<<<<<< HEAD
-// Be careful when using SSR for cross-request state pollution
-// due to creating a Singleton instance here;
-// If any client changes this (global) instance, it might be a
-// good idea to move this instance creation inside of the
-// "export default () => {}" function below (which runs individually
-// for each client)
-
-// Use environment variable or default to localhost for development
-const baseURL = process.env.VUE_APP_API_URL || 'http://localhost:5000'
+// Conectamos con el Backend .NET
+// Usa variable de entorno o el puerto por defecto (7002)
+const baseURL = process.env.VUE_APP_API_URL || 'https://localhost:7002/api'
 
 const api = axios.create({
   baseURL,
   withCredentials: true,
   headers: {
-    'Content-Type': 'application/json'
-  }
+    'Content-Type': 'application/json',
+  },
 })
-=======
-// ⚠️ IMPORTANTE: Aquí conectamos con tu Backend .NET
-// Asegúrate de que el puerto (7002) sea el mismo que sale en tu navegador cuando corres .NET
-const api = axios.create({ baseURL: 'https://localhost:7002/api' })
->>>>>>> notificacionesMejora/incumplimiento-riesgo
 
 export default defineBoot(({ app }) => {
   app.config.globalProperties.$axios = axios
   app.config.globalProperties.$api = api
 })
+
+// Exportar api para que otros módulos puedan importarlo
+export { api }
