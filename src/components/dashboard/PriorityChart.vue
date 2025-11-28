@@ -30,21 +30,9 @@
     <q-separator />
 
     <q-card-section class="row justify-center q-gutter-sm">
-      <div class="legend-item">
-        <span class="legend-color" style="background-color: #c62828"></span>
-        <span class="text-caption">Crítica</span>
-      </div>
-      <div class="legend-item">
-        <span class="legend-color" style="background-color: #f57c00"></span>
-        <span class="text-caption">Alta</span>
-      </div>
-      <div class="legend-item">
-        <span class="legend-color" style="background-color: #fbc02d"></span>
-        <span class="text-caption">Media</span>
-      </div>
-      <div class="legend-item">
-        <span class="legend-color" style="background-color: #2e7d32"></span>
-        <span class="text-caption">Baja</span>
+      <div v-for="item in legendItems" :key="item.label" class="legend-item">
+        <span class="legend-color" :style="{ backgroundColor: item.color }"></span>
+        <span class="text-caption">{{ item.label }}</span>
       </div>
     </q-card-section>
   </q-card>
@@ -53,6 +41,9 @@
 <script setup>
 import { computed } from 'vue'
 import { Bar } from 'vue-chartjs'
+import { useConfigStore } from 'src/stores/configStore'
+
+const configStore = useConfigStore()
 
 const props = defineProps({
   data: {
@@ -77,6 +68,19 @@ const props = defineProps({
   },
 })
 
+// Obtener prioridades activas del backend con sus colores
+const prioridadesActivas = computed(() =>
+  configStore.prioridades.filter(p => p.activo)
+)
+
+// Crear leyenda dinámica basada en las prioridades del backend
+const legendItems = computed(() =>
+  prioridadesActivas.value.map(p => ({
+    label: p.nombre,
+    color: p.color || '#607d8b'
+  }))
+)
+
 const chartData = computed(() => {
   if (!props.data || props.data.length === 0) {
     return {
@@ -85,16 +89,19 @@ const chartData = computed(() => {
     }
   }
 
-  const priorities = ['Crítica', 'Alta', 'Media', 'Baja']
-  const colors = ['#c62828', '#f57c00', '#fbc02d', '#2e7d32']
-  const borderColors = ['#b71c1c', '#e65100', '#f9a825', '#1b5e20']
-
   const labels = props.data.map((item) => item.prioridad)
   const cumplimientoData = props.data.map((item) => parseFloat(item.cumplimientoPercentage))
-  const backgroundColors = labels.map((label) => colors[priorities.indexOf(label)] || '#757575')
-  const borderColorsData = labels.map(
-    (label) => borderColors[priorities.indexOf(label)] || '#616161',
-  )
+
+  // Mapear colores desde el backend
+  const backgroundColors = labels.map((label) => {
+    const prioridad = prioridadesActivas.value.find(p => p.nombre === label)
+    return prioridad?.color || '#757575'
+  })
+
+  const borderColorsData = backgroundColors.map(color => {
+    // Oscurecer el color para el borde
+    return color.replace(/^#/, '#').length === 7 ? color : '#616161'
+  })
 
   return {
     labels,

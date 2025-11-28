@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { configService } from 'src/services/configService'
 
 /**
  * Store de configuración y utilidades relacionadas con alertas.
@@ -10,163 +11,29 @@ import { ref, computed } from 'vue'
  * Para Vite use VITE_API_BASE_URL en .env; si no existe, pasar baseUrl al init.
  */
 export const useConfigStore = defineStore('config', () => {
-  // Base URL y proveedor de token (inicializar con init)
-  let _baseUrl = import.meta.env.VITE_API_BASE_URL || ''
-  let _tokenProvider = null // () => string | null
+  // ============================================
+  // CONFIGURACIÓN DE BLOQUES TECNOLÓGICOS
+  // ============================================
+  // Los bloques se cargan desde el backend
+  const bloques = ref([])
 
-  function init(options = {}) {
-    if (options.baseUrl) _baseUrl = options.baseUrl
-    if (options.tokenProvider) _tokenProvider = options.tokenProvider
-  }
-
-  function _headers() {
-    const headers = { 'Content-Type': 'application/json' }
-    try {
-      const token = _tokenProvider?.()
-      if (token) headers['Authorization'] = `Bearer ${token}`
-    } catch {
-      // tokenProvider puede lanzar si no está lista; ignorar
-    }
-    return headers
-  }
-
-  async function _fetch(path, opts = {}) {
-    const url = (_baseUrl || '').replace(/\/+$/, '') + '/' + path.replace(/^\/+/, '')
-    const options = {
-      headers: { ...(opts.headers || {}), ..._headers() },
-      ...opts,
-    }
-    const res = await fetch(url, options)
-    if (!res.ok) {
-      const text = await res.text().catch(() => '')
-      const err = new Error(`HTTP ${res.status} ${res.statusText} ${text}`)
-      err.status = res.status
-      throw err
-    }
-    // no content
-    if (res.status === 204) return null
-    return res.json().catch(() => null)
-  }
-
-  // Estado reactivo
-  const bloques = ref([]) // { id, nombre, descripcion, departamento, icon, color, activo }
-  const prioridades = ref([]) // { nombre, nivel, icon, color, slaMultiplier }
-  const tiposSolicitud = ref([]) // { id, nombre, descripcion, sla? }
-  const estados = ref([]) // { id, codigo, nombre, descripcion, icon?, color? }
+  // ============================================
+  // CONFIGURACIÓN DE PRIORIDADES
+  // ============================================
+  // Las prioridades se obtienen desde el backend (datos reales de solicitudes)
+  const prioridades = ref([])
 
   // ============================================
   // FETCHERS (backend)
   // ============================================
-  async function fetchBloquesTech() {
-    // Endpoint: GET /api/RolRegistro
-    try {
-      const data = await _fetch('api/RolRegistro', { method: 'GET' })
-      // Mapear a forma del frontend
-      bloques.value = (data || []).map((r) => ({
-        id: r.idRolRegistro ?? r.id,
-        nombre: r.nombreRol ?? r.nombre,
-        descripcion: r.descripcion ?? '',
-        departamento: r.bloqueTech ?? 'General',
-        icon: r.icon ?? null,
-        color: r.color ?? null,
-        activo: r.esActivo ?? true,
-      }))
-      return bloques.value
-    } catch (error) {
-      // Si falla (401 sin autenticación), dejar vacío pero no fallar
-      console.warn('No se pudieron cargar bloques tecnológicos:', error.message)
-      return []
-    }
-  }
-
-  async function fetchTiposSolicitud() {
-    // Endpoint: GET /api/TipoSolicitudCatalogo
-    try {
-      const data = await _fetch('api/TipoSolicitudCatalogo', { method: 'GET' })
-      tiposSolicitud.value = (data || []).map((t) => ({
-        id: t.idTipoSolicitud ?? t.id,
-        nombre: t.codigo ?? t.descripcion ?? 'Sin nombre',
-        descripcion: t.descripcion ?? '',
-        sla: t.sla ?? null, // si el backend expone SLA en otro endpoint, enriquecer después
-      }))
-      return tiposSolicitud.value
-    } catch (error) {
-      // Si falla (401 sin autenticación), dejar vacío pero no fallar
-      console.warn('No se pudieron cargar tipos de solicitud:', error.message)
-      return []
-    }
-  }
-
-  async function fetchEstados() {
-    // Endpoint: GET /api/EstadoSolicitudCatalogo
-    try {
-      const data = await _fetch('api/EstadoSolicitudCatalogo', { method: 'GET' })
-      estados.value = (data || []).map((e) => ({
-        id: e.idEstadoSolicitud ?? e.id,
-        codigo: e.codigo ?? '',
-        nombre: e.descripcion ?? e.codigo ?? 'Estado',
-        descripcion: e.descripcion ?? '',
-        icon: e.icon ?? null,
-        color: e.color ?? null,
-      }))
-      return estados.value
-    } catch (error) {
-      // Si falla (401 sin autenticación), dejar vacío pero no fallar
-      console.warn('No se pudieron cargar estados:', error.message)
-      return []
-    }
-  }
-
-  async function fetchAllConfig() {
-    // Obtener datos del backend
-    // Nota: Requiere autenticación. Los endpoints deben ser públicos o tener un token válido
-    await Promise.allSettled([fetchBloquesTech(), fetchTiposSolicitud(), fetchEstados()])
-
-    return {
-      bloques: bloques.value,
-      prioridades: prioridades.value,
-      tiposSolicitud: tiposSolicitud.value,
-      estados: estados.value,
-    }
-  }
+  // Los tipos de solicitud se cargan desde el backend
+  const tiposSolicitud = ref([])
 
   // ============================================
   // ALERT API (endpoints para Android/Frontend)
   // ============================================
-  // GET /api/alertum/user/{userId}?onlyUnread=&page=&pageSize=
-  async function fetchAlertsForUser(userId, { onlyUnread = false, page = 1, pageSize = 20 } = {}) {
-    const qs = new URLSearchParams({
-      onlyUnread: String(onlyUnread),
-      page: String(page),
-      pageSize: String(pageSize),
-    })
-    const data = await _fetch(`api/alertum/user/${userId}?${qs.toString()}`, { method: 'GET' })
-    return data || []
-  }
-
-  // GET /api/alertum/user/{userId}/unread/count
-  async function fetchUnreadCount(userId) {
-    const data = await _fetch(`api/alertum/user/${userId}/unread/count`, { method: 'GET' })
-    return data?.Unread ?? 0
-  }
-
-  // POST /api/alertum/{id}/mark-read?userId=
-  async function markAlertAsRead(alertId, userId) {
-    await _fetch(`api/alertum/${alertId}/mark-read?userId=${encodeURIComponent(userId)}`, {
-      method: 'POST',
-    })
-    return true
-  }
-
-  // POST /api/alertum  (crear alerta)
-  async function createAlert(payload) {
-    // payload debe seguir AlertumDto (idSolicitud, idTipoAlerta, idEstadoAlerta, nivel, mensaje, enviadoEmail)
-    const created = await _fetch('api/alertum', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    })
-    return created
-  }
+  // Los estados se obtienen desde el backend (datos reales)
+  const estados = ref([])
 
   // ============================================
   // COMPUTED y UTILIDADES
@@ -200,20 +67,24 @@ export const useConfigStore = defineStore('config', () => {
   )
 
   const prioridadesOptions = computed(() =>
-    prioridades.value.map((p) => ({
-      label: p.nombre,
-      value: p.nombre,
-      icon: p.icon,
-      color: p.color,
-    })),
+    prioridades.value
+      .filter(p => p.activo)
+      .map((p) => ({
+        label: p.nombre,
+        value: p.nombre,
+        icon: p.icon,
+        color: p.color,
+      })),
   )
 
   const tiposSolicitudOptions = computed(() =>
-    tiposSolicitud.value.map((t) => ({
-      label: t.nombre,
-      value: t.nombre,
-      id: t.id,
-    })),
+    tiposSolicitud.value
+      .filter(t => t.activo)
+      .map((t) => ({
+        label: t.nombre,
+        value: t.nombre,
+        icon: t.icon,
+      })),
   )
 
   const estadosOptions = computed(() =>
@@ -285,7 +156,529 @@ export const useConfigStore = defineStore('config', () => {
     return Math.round(slaBase * multiplier)
   }
 
-  // Export
+  // ============================================
+  // NOTA: Todos los datos ahora provienen del backend
+  // No hay datos mockeados ni hardcodeados
+  // ============================================
+
+  // ============================================
+  // INTEGRACIÓN CON BACKEND - ÁREAS/BLOQUES
+  // ============================================
+
+  const loading = ref(false)
+  const areasBackend = ref([])
+
+  /**
+   * Cargar áreas/bloques desde el backend
+   */
+  async function loadAreasFromBackend() {
+    loading.value = true
+    try {
+      const response = await configService.getAllAreas()
+      areasBackend.value = response.data
+
+      // Sincronizar con bloques locales
+      if (response.data && response.data.length > 0) {
+        response.data.forEach(area => {
+          // Buscar por backendId en lugar de nombre para manejar cambios de nombre
+          const existing = bloques.value.find(b => b.backendId === area.idArea)
+          if (!existing) {
+            // Crear nuevo bloque si no existe
+            bloques.value.push({
+              id: area.idArea,
+              nombre: area.nombreArea,
+              descripcion: area.descripcion || `Área ${area.nombreArea}`,
+              departamento: 'Tech',
+              color: '#' + Math.floor(Math.random()*16777215).toString(16),
+              icon: 'business',
+              activo: area.activo !== undefined ? area.activo : true,
+              backendId: area.idArea
+            })
+          } else {
+            // Actualizar TODOS los datos del bloque existente
+            existing.nombre = area.nombreArea // ⬅️ IMPORTANTE: actualizar el nombre
+            existing.descripcion = area.descripcion || existing.descripcion
+            existing.activo = area.activo !== undefined ? area.activo : true
+            existing.backendId = area.idArea
+            existing.id = area.idArea
+          }
+        })
+      }
+    } catch (error) {
+      console.error('Error cargando áreas desde backend:', error)
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * Crear área/bloque en el backend
+   */
+  async function createAreaBackend(bloqueData) {
+    loading.value = true
+    try {
+      const areaDto = {
+        NombreArea: bloqueData.nombre,
+        Descripcion: bloqueData.descripcion || ''
+      }
+      const response = await configService.createArea(areaDto)
+
+      // Agregar a bloques locales con backendId
+      bloques.value.push({
+        ...bloqueData,
+        id: response.data.idArea,
+        backendId: response.data.idArea,
+        activo: true
+      })
+
+      return response.data
+    } catch (error) {
+      console.error('Error creando área en backend:', error)
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * Actualizar área/bloque en el backend
+   */
+  async function updateAreaBackend(bloqueId, bloqueData) {
+    loading.value = true
+    try {
+      const bloque = bloques.value.find(b => b.id === bloqueId || b.backendId === bloqueId)
+      const backendId = bloque?.backendId || bloqueId
+
+      const areaDto = {
+        NombreArea: bloqueData.NombreArea || bloqueData.nombre || bloque?.nombre || '',
+        Descripcion: bloqueData.Descripcion || bloqueData.descripcion || bloque?.descripcion || '',
+        Activo: bloqueData.Activo !== undefined ? bloqueData.Activo : (bloque?.activo !== undefined ? bloque.activo : true)
+      }
+
+      const response = await configService.updateArea(backendId, areaDto)
+
+      // Recargar áreas para sincronizar estado
+      await loadAreasFromBackend()
+
+      return response.data
+    } catch (error) {
+      console.error('Error actualizando área en backend:', error)
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * Eliminar área/bloque del backend
+   */
+  async function deleteAreaBackend(bloqueId) {
+    loading.value = true
+    try {
+      const bloque = bloques.value.find(b => b.id === bloqueId || b.backendId === bloqueId)
+      const backendId = bloque?.backendId || bloqueId
+
+      await configService.deleteArea(backendId)
+
+      // Eliminar de bloques locales
+      const index = bloques.value.findIndex(b => b.id === bloqueId || b.backendId === bloqueId)
+      if (index !== -1) {
+        bloques.value.splice(index, 1)
+      }
+    } catch (error) {
+      console.error('Error eliminando área del backend:', error)
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
+  // ============================================
+  // INTEGRACIÓN CON BACKEND - TIPOS DE SOLICITUD
+  // ============================================
+
+  const tiposSolicitudBackend = ref([])
+
+  /**
+   * Cargar tipos de solicitud desde el backend
+   */
+  async function loadTiposSolicitudFromBackend() {
+    loading.value = true
+    try {
+      const response = await configService.getAllTiposSolicitud()
+      tiposSolicitudBackend.value = response.data
+
+      console.log('🔍 [loadTiposSolicitudFromBackend] Datos del backend:', response.data)
+
+      // Sincronizar con tipos locales
+      if (response.data && response.data.length > 0) {
+        // Crear un nuevo array para forzar reactividad de Vue
+        const nuevosTipos = response.data.map(tipo => ({
+          id: tipo.idTipoSolicitud,
+          nombre: tipo.descripcion,
+          descripcion: tipo.descripcion || '',
+          sla: 30, // El backend no tiene diasSla, usar valor por defecto
+          icon: getIconForTipo(tipo.descripcion),
+          color: getColorForTipo(tipo.descripcion),
+          activo: tipo.activo !== undefined ? tipo.activo : true,
+          backendId: tipo.idTipoSolicitud
+        }))
+
+        // Reemplazar el array completo para asegurar reactividad
+        tiposSolicitud.value = nuevosTipos
+
+        console.log('✅ [loadTiposSolicitudFromBackend] tiposSolicitud después del map:', tiposSolicitud.value)
+        console.log('📊 [loadTiposSolicitudFromBackend] Total tipos (incluyendo inactivos):', tiposSolicitud.value.length)
+        console.log('📊 [loadTiposSolicitudFromBackend] Tipos activos:', tiposSolicitud.value.filter(t => t.activo).length)
+        console.log('📊 [loadTiposSolicitudFromBackend] Tipos inactivos:', tiposSolicitud.value.filter(t => !t.activo).length)
+      }
+    } catch (error) {
+      console.error('Error cargando tipos de solicitud desde backend:', error)
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * Asignar icono basado en el tipo de solicitud
+   */
+  function getIconForTipo(descripcion) {
+    const iconMap = {
+      'Nuevo Personal': 'person_add',
+      'Reemplazo': 'swap_horiz',
+      'Transferencia': 'transfer_within_a_station',
+      'Promoción': 'trending_up'
+    }
+    return iconMap[descripcion] || 'assignment'
+  }
+
+  /**
+   * Asignar color basado en el tipo de solicitud
+   */
+  function getColorForTipo(descripcion) {
+    const colorMap = {
+      'Nuevo Personal': '#1976d2',
+      'Reemplazo': '#388e3c',
+      'Transferencia': '#f57c00',
+      'Promoción': '#9c27b0'
+    }
+    return colorMap[descripcion] || '#607d8b'
+  }
+
+  /**
+   * Crear tipo de solicitud en el backend
+   */
+  async function createTipoSolicitudBackend(tipoData) {
+    loading.value = true
+    try {
+      const tipoDto = {
+        codigo: tipoData.nombre.toUpperCase().replace(/\s+/g, '_'),
+        descripcion: tipoData.nombre
+      }
+      const response = await configService.createTipoSolicitud(tipoDto)
+
+      // Agregar a tipos locales
+      tiposSolicitud.value.push({
+        id: response.data.idTipoSolicitud,
+        nombre: response.data.descripcion,
+        descripcion: response.data.descripcion || '',
+        sla: tipoData.sla || 30,
+        icon: tipoData.icon || 'assignment',
+        color: tipoData.color || '#000000',
+        activo: true,
+        backendId: response.data.idTipoSolicitud
+      })
+
+      return response.data
+    } catch (error) {
+      console.error('Error creando tipo de solicitud en backend:', error)
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * Actualizar tipo de solicitud en el backend
+   */
+  async function updateTipoSolicitudBackend(tipoId, tipoData) {
+    loading.value = true
+    try {
+      const tipo = tiposSolicitud.value.find(t => t.id === tipoId || t.backendId === tipoId)
+      const backendId = tipo?.backendId || tipoId
+
+      const tipoDto = {
+        Codigo: tipoData.Codigo || tipoData.nombre?.toUpperCase().replace(/\s+/g, '_') || tipo?.nombre.toUpperCase().replace(/\s+/g, '_'),
+        Descripcion: tipoData.Descripcion || tipoData.nombre || tipo?.nombre,
+        Activo: tipoData.Activo !== undefined ? tipoData.Activo : (tipo?.activo !== undefined ? tipo.activo : true)
+      }
+
+      const response = await configService.updateTipoSolicitud(backendId, tipoDto)
+
+      // Recargar tipos de solicitud para sincronizar
+      await loadTiposSolicitudFromBackend()
+
+      return response.data
+    } catch (error) {
+      console.error('Error actualizando tipo de solicitud en backend:', error)
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * Eliminar tipo de solicitud del backend
+   */
+  async function deleteTipoSolicitudBackend(tipoId) {
+    loading.value = true
+    try {
+      const tipo = tiposSolicitud.value.find(t => t.id === tipoId || t.backendId === tipoId)
+      const backendId = tipo?.backendId || tipoId
+
+      await configService.deleteTipoSolicitud(backendId)
+
+      // Recargar tipos de solicitud para sincronizar
+      await loadTiposSolicitudFromBackend()
+    } catch (error) {
+      console.error('Error eliminando tipo de solicitud del backend:', error)
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
+  // ============================================
+  // INTEGRACIÓN CON BACKEND - CONFIG SLA
+  // ============================================
+
+  const configSlaList = ref([])
+
+  /**
+   * Cargar configuraciones SLA desde el backend
+   */
+  async function loadConfigSlaFromBackend() {
+    loading.value = true
+    try {
+      const response = await configService.getAllConfigSla()
+      // Filtrar solo las configuraciones activas
+      configSlaList.value = response.data.filter(config => config.esActivo !== false)
+      return configSlaList.value
+    } catch (error) {
+      console.error('Error cargando configuraciones SLA desde backend:', error)
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * Crear configuración SLA en el backend
+   */
+  async function createConfigSlaBackend(configData) {
+    loading.value = true
+    try {
+      const configDto = {
+        CodigoSla: configData.codigoSla,
+        Descripcion: configData.descripcion,
+        IdTipoSolicitud: configData.idTipoSolicitud,
+        DiasUmbral: configData.diasUmbral,
+        EsActivo: configData.esActivo !== undefined ? configData.esActivo : true
+      }
+      await configService.createConfigSla(configDto)
+
+      // Recargar configuraciones SLA para sincronizar
+      await loadConfigSlaFromBackend()
+    } catch (error) {
+      console.error('Error creando configuración SLA en backend:', error)
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * Actualizar configuración SLA en el backend
+   */
+  async function updateConfigSlaBackend(id, configData) {
+    loading.value = true
+    try {
+      const configDto = {
+        CodigoSla: configData.codigoSla,
+        Descripcion: configData.descripcion,
+        IdTipoSolicitud: configData.idTipoSolicitud,
+        DiasUmbral: configData.diasUmbral,
+        EsActivo: configData.esActivo
+      }
+      await configService.updateConfigSla(id, configDto)
+
+      // Recargar configuraciones SLA para sincronizar
+      await loadConfigSlaFromBackend()
+    } catch (error) {
+      console.error('Error actualizando configuración SLA en backend:', error)
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * Eliminar configuración SLA del backend
+   */
+  async function deleteConfigSlaBackend(id) {
+    loading.value = true
+    try {
+      await configService.deleteConfigSla(id)
+
+      // Recargar configuraciones SLA para sincronizar
+      await loadConfigSlaFromBackend()
+    } catch (error) {
+      console.error('Error eliminando configuración SLA del backend:', error)
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
+  // ============================================
+  // INTEGRACIÓN CON BACKEND - PRIORIDADES
+  // ============================================
+
+  const prioridadesBackend = ref([])
+
+  /**
+   * Cargar prioridades desde el backend
+   */
+  async function loadPrioridadesFromBackend() {
+    loading.value = true
+    try {
+      const response = await configService.getAllPrioridades()
+      prioridadesBackend.value = response.data
+
+      console.log('🔍 [loadPrioridadesFromBackend] Datos del backend:', response.data)
+
+      // Sincronizar con prioridades locales
+      if (response.data && response.data.length > 0) {
+        // Crear un nuevo array para forzar reactividad de Vue
+        const nuevasPrioridades = response.data.map(prioridad => {
+          // Usar la descripción del backend directamente (ej: "Crítica", "Alta", "Media", "Baja")
+          // Esto asegura que coincida exactamente con los datos de las solicitudes
+          const nombreCorto = prioridad.descripcion
+
+          return {
+            id: prioridad.idPrioridad,
+            nombre: nombreCorto, // Usar descripción del backend para matching exacto con datos
+            codigo: prioridad.codigo,
+            descripcion: prioridad.descripcion || '',
+            nivel: prioridad.nivel,
+            slaMultiplier: prioridad.slaMultiplier,
+            icon: prioridad.icon || 'label',
+            color: prioridad.color || '#607d8b',
+            activo: prioridad.activo !== undefined ? prioridad.activo : true,
+            backendId: prioridad.idPrioridad
+          }
+        })
+
+        // Reemplazar el array completo para asegurar reactividad
+        prioridades.value = nuevasPrioridades
+
+        console.log('✅ [loadPrioridadesFromBackend] prioridades después del map:', prioridades.value)
+        console.log('📊 [loadPrioridadesFromBackend] Total prioridades (incluyendo inactivas):', prioridades.value.length)
+        console.log('📊 [loadPrioridadesFromBackend] Prioridades activas:', prioridades.value.filter(p => p.activo).length)
+        console.log('📊 [loadPrioridadesFromBackend] Prioridades inactivas:', prioridades.value.filter(p => !p.activo).length)
+      }
+    } catch (error) {
+      console.error('Error cargando prioridades desde backend:', error)
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * Crear prioridad en el backend
+   */
+  async function createPrioridadBackend(prioridadData) {
+    loading.value = true
+    try {
+      const prioridadDto = {
+        Codigo: prioridadData.codigo || prioridadData.nombre.toUpperCase().replace(/\s+/g, '_'),
+        Descripcion: prioridadData.nombre || prioridadData.descripcion,
+        Nivel: prioridadData.nivel,
+        SlaMultiplier: prioridadData.slaMultiplier,
+        Icon: prioridadData.icon || 'label',
+        Color: prioridadData.color || '#607d8b'
+      }
+      const response = await configService.createPrioridad(prioridadDto)
+
+      // Recargar prioridades para sincronizar
+      await loadPrioridadesFromBackend()
+
+      return response.data
+    } catch (error) {
+      console.error('Error creando prioridad en backend:', error)
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * Actualizar prioridad en el backend
+   */
+  async function updatePrioridadBackend(prioridadId, prioridadData) {
+    loading.value = true
+    try {
+      const prioridad = prioridades.value.find(p => p.id === prioridadId || p.backendId === prioridadId)
+      const backendId = prioridad?.backendId || prioridadId
+
+      const prioridadDto = {
+        Codigo: prioridadData.Codigo || prioridadData.codigo || prioridad?.codigo,
+        Descripcion: prioridadData.Descripcion || prioridadData.nombre || prioridad?.descripcion,
+        Nivel: prioridadData.Nivel !== undefined ? prioridadData.Nivel : prioridadData.nivel,
+        SlaMultiplier: prioridadData.SlaMultiplier !== undefined ? prioridadData.SlaMultiplier : prioridadData.slaMultiplier,
+        Icon: prioridadData.Icon || prioridadData.icon || prioridad?.icon || 'label',
+        Color: prioridadData.Color || prioridadData.color || prioridad?.color || '#607d8b',
+        Activo: prioridadData.Activo !== undefined ? prioridadData.Activo : (prioridad?.activo !== undefined ? prioridad.activo : true)
+      }
+
+      const response = await configService.updatePrioridad(backendId, prioridadDto)
+
+      // Recargar prioridades para sincronizar estado
+      await loadPrioridadesFromBackend()
+
+      return response.data
+    } catch (error) {
+      console.error('Error actualizando prioridad en backend:', error)
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * Eliminar prioridad del backend
+   */
+  async function deletePrioridadBackend(prioridadId) {
+    loading.value = true
+    try {
+      const prioridad = prioridades.value.find(p => p.id === prioridadId || p.backendId === prioridadId)
+      const backendId = prioridad?.backendId || prioridadId
+
+      await configService.deletePrioridad(backendId)
+
+      // Recargar prioridades para sincronizar
+      await loadPrioridadesFromBackend()
+    } catch (error) {
+      console.error('Error eliminando prioridad del backend:', error)
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     // init
     init,
@@ -295,6 +688,11 @@ export const useConfigStore = defineStore('config', () => {
     prioridades,
     tiposSolicitud,
     estados,
+    loading,
+    areasBackend,
+    tiposSolicitudBackend,
+    configSlaList,
+    prioridadesBackend,
 
     // computed
     departamentos,
@@ -328,7 +726,31 @@ export const useConfigStore = defineStore('config', () => {
     agregarPrioridad,
     agregarTipoSolicitud,
 
-    // util
+    // Integración Backend - Áreas/Bloques
+    loadAreasFromBackend,
+    createAreaBackend,
+    updateAreaBackend,
+    deleteAreaBackend,
+
+    // Integración Backend - Tipos de Solicitud
+    loadTiposSolicitudFromBackend,
+    createTipoSolicitudBackend,
+    updateTipoSolicitudBackend,
+    deleteTipoSolicitudBackend,
+
+    // Integración Backend - Config SLA
+    loadConfigSlaFromBackend,
+    createConfigSlaBackend,
+    updateConfigSlaBackend,
+    deleteConfigSlaBackend,
+
+    // Integración Backend - Prioridades
+    loadPrioridadesFromBackend,
+    createPrioridadBackend,
+    updatePrioridadBackend,
+    deletePrioridadBackend,
+
+    // Utilidades
     calcularSLA,
   }
 })

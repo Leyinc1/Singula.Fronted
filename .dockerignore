@@ -1,0 +1,14 @@
+node_modules
+npm-debug.log
+.npm
+.eslintcache
+dist
+.quasar
+.git
+.gitignore
+README.md
+.env
+.env.local
+*.md
+.vscode
+.idea

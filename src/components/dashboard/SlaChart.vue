@@ -29,14 +29,17 @@
 
     <q-separator />
 
-    <q-card-section class="row justify-center">
-      <div class="legend-item q-mr-lg">
-        <span class="legend-color" style="background-color: #42a5f5"></span>
-        <span class="text-caption">SLA1 (Nuevo Personal - 35 días)</span>
-      </div>
-      <div class="legend-item">
-        <span class="legend-color" style="background-color: #66bb6a"></span>
-        <span class="text-caption">SLA2 (Reemplazo - 20 días)</span>
+    <q-card-section class="row justify-center q-gutter-md flex-wrap">
+      <div
+        v-for="(dataset, index) in chartData.datasets"
+        :key="index"
+        class="legend-item"
+      >
+        <span
+          class="legend-color"
+          :style="{ backgroundColor: dataset.backgroundColor }"
+        ></span>
+        <span class="text-caption">{{ dataset.label }}</span>
       </div>
     </q-card-section>
   </q-card>
@@ -61,13 +64,25 @@ const props = defineProps({
   },
   subtitle: {
     type: String,
-    default: 'Porcentaje de cumplimiento por tipo de solicitud',
+    default: 'Porcentaje de cumplimiento por tipo de SLA',
   },
   chartHeight: {
     type: Number,
     default: 300,
   },
 })
+
+// Paleta de colores para tipos de solicitud
+const colorPalette = [
+  { bg: '#42a5f5', border: '#1976d2' }, // Azul
+  { bg: '#66bb6a', border: '#388e3c' }, // Verde
+  { bg: '#ffa726', border: '#f57c00' }, // Naranja
+  { bg: '#ab47bc', border: '#7b1fa2' }, // Púrpura
+  { bg: '#ef5350', border: '#c62828' }, // Rojo
+  { bg: '#26c6da', border: '#00838f' }, // Cian
+  { bg: '#ffca28', border: '#f9a825' }, // Amarillo
+  { bg: '#8d6e63', border: '#5d4037' }, // Marrón
+]
 
 const chartData = computed(() => {
   if (!props.data || props.data.length === 0) {
@@ -78,29 +93,38 @@ const chartData = computed(() => {
   }
 
   const labels = props.data.map((item) => item.role)
-  const sla1Data = props.data.map((item) => parseFloat(item.sla1Percentage))
-  const sla2Data = props.data.map((item) => parseFloat(item.sla2Percentage))
+
+  // Identificar todos los tipos de solicitud presentes en los datos
+  const tiposSet = new Set()
+  props.data.forEach(item => {
+    Object.keys(item).forEach(key => {
+      // Excluir campos que no son tipos de solicitud
+      if (key !== 'role' && key !== 'sla1Percentage' && key !== 'sla2Percentage' && item[key] !== undefined) {
+        tiposSet.add(key)
+      }
+    })
+  })
+
+  const tipos = Array.from(tiposSet)
+
+  // Crear un dataset por cada tipo de solicitud
+  const datasets = tipos.map((tipo, index) => {
+    const colorIndex = index % colorPalette.length
+    const colors = colorPalette[colorIndex]
+
+    return {
+      label: tipo,
+      data: props.data.map(item => parseFloat(item[tipo] || 0)),
+      backgroundColor: colors.bg,
+      borderColor: colors.border,
+      borderWidth: 1,
+      borderRadius: 4,
+    }
+  })
 
   return {
     labels,
-    datasets: [
-      {
-        label: 'SLA1 (Nuevo Personal)',
-        data: sla1Data,
-        backgroundColor: '#42a5f5',
-        borderColor: '#1976d2',
-        borderWidth: 1,
-        borderRadius: 4,
-      },
-      {
-        label: 'SLA2 (Reemplazo)',
-        data: sla2Data,
-        backgroundColor: '#66bb6a',
-        borderColor: '#388e3c',
-        borderWidth: 1,
-        borderRadius: 4,
-      },
-    ],
+    datasets,
   }
 })
 

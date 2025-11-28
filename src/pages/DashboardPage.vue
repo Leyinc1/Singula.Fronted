@@ -2,8 +2,8 @@
   <q-page class="dashboard-page" style="background-color: #fafafa">
     <div class="q-pa-md">
       <!-- Encabezado -->
-      <div class="row items-center q-mb-lg">
-        <div class="col">
+      <div class="row items-center q-mb-lg q-col-gutter-md">
+        <div class="col-12 col-md-8">
           <h4 class="text-h4 q-my-none text-weight-bold text-black">
             <q-icon name="dashboard" class="q-mr-sm" />
             Dashboard de Indicadores
@@ -13,7 +13,7 @@
             tecnológicas
           </p>
         </div>
-        <div class="col-auto">
+        <div class="col-12 col-md-4 text-right">
           <q-btn
             outline
             color="black"
@@ -22,6 +22,7 @@
             @click="refreshData"
             :loading="loading"
             style="border-width: 2px"
+            class="full-width-xs"
           />
         </div>
       </div>
@@ -30,7 +31,7 @@
       <q-card class="q-mb-lg tata-card">
         <q-card-section>
           <div class="row q-col-gutter-md items-end">
-            <div class="col-12 col-md-2">
+            <div class="col-12 col-sm-6 col-md-4 col-lg-2">
               <q-input
                 v-model="localFilters.startDate"
                 filled
@@ -45,7 +46,7 @@
               </q-input>
             </div>
 
-            <div class="col-12 col-md-2">
+            <div class="col-12 col-sm-6 col-md-4 col-lg-2">
               <q-input
                 v-model="localFilters.endDate"
                 filled
@@ -60,12 +61,14 @@
               </q-input>
             </div>
 
-            <div class="col-12 col-md-2">
+            <div class="col-12 col-sm-6 col-md-4 col-lg-3">
               <q-select
                 v-model="localFilters.bloqueTech"
                 filled
-                label="BLOQUE TECH"
+                label="ÁREAS"
                 :options="bloquesOptions"
+                multiple
+                use-chips
                 clearable
                 emit-value
                 map-options
@@ -74,15 +77,28 @@
                 <template v-slot:prepend>
                   <q-icon name="work" color="black" />
                 </template>
+                <template v-slot:option="scope">
+                  <q-item v-bind="scope.itemProps">
+                    <q-item-section avatar>
+                      <q-icon :name="scope.opt.icon" :color="scope.opt.color" />
+                    </q-item-section>
+                    <q-item-section>
+                      <q-item-label>{{ scope.opt.label }}</q-item-label>
+                      <q-item-label caption>{{ scope.opt.departamento }}</q-item-label>
+                    </q-item-section>
+                  </q-item>
+                </template>
               </q-select>
             </div>
 
-            <div class="col-12 col-md-2">
+            <div class="col-12 col-sm-6 col-md-4 col-lg-2">
               <q-select
                 v-model="localFilters.tipoSolicitud"
                 filled
-                label="Tipo Solicitud"
+                label="Tipo de SLA"
                 :options="tipoSolicitudOptions"
+                multiple
+                use-chips
                 clearable
                 emit-value
                 map-options
@@ -91,15 +107,27 @@
                 <template v-slot:prepend>
                   <q-icon name="assignment" color="black" />
                 </template>
+                <template v-slot:option="scope">
+                  <q-item v-bind="scope.itemProps">
+                    <q-item-section avatar>
+                      <q-icon :name="scope.opt.icon" />
+                    </q-item-section>
+                    <q-item-section>
+                      <q-item-label>{{ scope.opt.label }}</q-item-label>
+                    </q-item-section>
+                  </q-item>
+                </template>
               </q-select>
             </div>
 
-            <div class="col-12 col-md-2">
+            <div class="col-12 col-sm-6 col-md-4 col-lg-2">
               <q-select
                 v-model="localFilters.prioridad"
                 filled
                 label="Prioridad"
                 :options="prioridadOptions"
+                multiple
+                use-chips
                 clearable
                 emit-value
                 map-options
@@ -108,10 +136,20 @@
                 <template v-slot:prepend>
                   <q-icon name="priority_high" color="black" />
                 </template>
+                <template v-slot:option="scope">
+                  <q-item v-bind="scope.itemProps">
+                    <q-item-section avatar>
+                      <q-icon :name="scope.opt.icon" :color="scope.opt.color" />
+                    </q-item-section>
+                    <q-item-section>
+                      <q-item-label>{{ scope.opt.label }}</q-item-label>
+                    </q-item-section>
+                  </q-item>
+                </template>
               </q-select>
             </div>
 
-            <div class="col-12 col-md-2">
+            <div class="col-12 col-sm-6 col-md-4 col-lg-3">
               <q-select
                 v-model="localFilters.cumpleSla"
                 filled
@@ -154,33 +192,27 @@
         </q-card-section>
       </q-card>
 
-      <!-- KPIs -->
+      <!-- KPIs Dinámicos -->
       <div class="row q-col-gutter-md q-mb-lg">
-        <div class="col-12 col-md-3">
+        <!-- KPIs por Tipo de SLA (Dinámico) -->
+        <div
+          v-for="(kpi, tipo) in kpisPorTipo"
+          :key="tipo"
+          class="col-12 col-sm-6 col-md-6 col-lg-3"
+        >
           <KpiCard
-            title="Cumplimiento SLA1"
-            :value="kpiSla1"
-            subtitle="Nuevo Personal (35 días)"
-            description="Porcentaje de solicitudes que cumplen el SLA1"
-            icon="trending_up"
+            :title="`Cumplimiento ${tipo}`"
+            :value="kpi.porcentaje"
+            :subtitle="`${tipo} (${kpi.diasUmbral} días)`"
+            :description="`${kpi.cumplidos} de ${kpi.total} solicitudes cumplen el SLA`"
+            :icon="tipo === 'Nuevo Personal' ? 'trending_up' : 'swap_horiz'"
             icon-color="grey-7"
             :threshold="80"
           />
         </div>
 
-        <div class="col-12 col-md-3">
-          <KpiCard
-            title="Cumplimiento SLA2"
-            :value="kpiSla2"
-            subtitle="Reemplazo (20 días)"
-            description="Porcentaje de solicitudes que cumplen el SLA2"
-            icon="swap_horiz"
-            icon-color="grey-8"
-            :threshold="80"
-          />
-        </div>
-
-        <div class="col-12 col-md-3">
+        <!-- KPI de Eficacia Global -->
+        <div class="col-12 col-sm-6 col-md-6 col-lg-3">
           <KpiCard
             title="Eficacia Global"
             :value="kpiEficacia"
@@ -192,7 +224,8 @@
           />
         </div>
 
-        <div class="col-12 col-md-3">
+        <!-- Total de Solicitudes -->
+        <div class="col-12 col-sm-6 col-md-6 col-lg-3">
           <KpiCard
             title="Total Solicitudes"
             :value="totalSolicitudes"
@@ -209,10 +242,10 @@
 
       <!-- Gráfico Principal -->
       <div class="row q-col-gutter-md q-mb-lg">
-        <div class="col-12 col-md-6">
-          <SlaChart :data="chartDataByRole" :loading="loading" title="Cumplimiento SLA por Rol" />
+        <div class="col-12 col-lg-6">
+          <SlaChart :data="chartDataByRole" :loading="loading" title="Cumplimiento SLA por Área" />
         </div>
-        <div class="col-12 col-md-6">
+        <div class="col-12 col-lg-6">
           <PriorityChart :data="chartDataByPriority" :loading="loading" />
         </div>
       </div>
@@ -231,14 +264,14 @@ import PriorityChart from 'src/components/dashboard/PriorityChart.vue'
 
 const slaStore = useSlaStore()
 const configStore = useConfigStore()
-const { loading, kpiSla1, kpiSla2, kpiEficacia, chartDataByRole } = storeToRefs(slaStore)
+const { loading, kpisPorTipo, kpiEficacia, chartDataByRole } = storeToRefs(slaStore)
 
 const localFilters = ref({
   startDate: null,
   endDate: null,
-  bloqueTech: null,
-  tipoSolicitud: null,
-  prioridad: null,
+  bloqueTech: [],
+  tipoSolicitud: [],
+  prioridad: [],
   cumpleSla: null,
 })
 
@@ -260,7 +293,8 @@ const totalSolicitudes = computed(() => {
 })
 
 const chartDataByPriority = computed(() => {
-  const priorities = ['Crítica', 'Alta', 'Media', 'Baja']
+  // Usar prioridades del backend (solo activas)
+  const priorities = prioridadOptions.value.map(p => p.value)
   const priorityData = []
 
   priorities.forEach((prioridad) => {
@@ -271,10 +305,10 @@ const chartDataByPriority = computed(() => {
 
     if (total > 0) {
       const cumplidas = solicitudesPrioridad.filter((item) => {
-        if (item.tipo_solicitud === 'Nuevo Personal') {
-          return item.cumple_sla1 === true
-        } else if (item.tipo_solicitud === 'Reemplazo') {
-          return item.cumple_sla2 === true
+        if (item.tipoSolicitud === 'Nuevo Personal') {
+          return item.cumpleSla1 === true
+        } else if (item.tipoSolicitud === 'Reemplazo') {
+          return item.cumpleSla2 === true
         }
         return false
       }).length
@@ -293,7 +327,12 @@ const chartDataByPriority = computed(() => {
   return priorityData
 })
 
-onMounted(() => {
+onMounted(async () => {
+  await Promise.all([
+    configStore.loadPrioridadesFromBackend(),
+    configStore.loadAreasFromBackend(),
+    configStore.loadTiposSolicitudFromBackend()
+  ])
   slaStore.fetchSlaData()
 })
 
@@ -312,9 +351,9 @@ function resetFilters() {
   localFilters.value = {
     startDate: null,
     endDate: null,
-    bloqueTech: null,
-    tipoSolicitud: null,
-    prioridad: null,
+    bloqueTech: [],
+    tipoSolicitud: [],
+    prioridad: [],
     cumpleSla: null,
   }
   slaStore.resetFilters()
@@ -329,4 +368,40 @@ function refreshData() {
 .dashboard-page {
   background-color: #f5f5f5;
 }
+
+.tata-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsividad para pantallas pequeñas */
+@media (max-width: 599px) {
+  .text-h4 {
+    font-size: 1.5rem !important;
+  }
+
+  .full-width-xs {
+    width: 100%;
+  }
+
+  .text-right {
+    text-align: left !important;
+  }
+}
+
+/* Tablets */
+@media (min-width: 600px) and (max-width: 1023px) {
+  .q-page {
+    padding: 0 8px;
+  }
+}
+
+/* Desktop */
+@media (min-width: 1024px) {
+  .q-page {
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+}
 </style>
+
