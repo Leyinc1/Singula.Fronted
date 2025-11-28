@@ -121,7 +121,7 @@ async function handleLogin() {
       type: 'positive',
       message: '¡Inicio de sesión exitoso!',
       caption: `Bienvenido ${result.user?.nombre || 'Usuario'}`,
-      position: 'top',
+      position: 'center',
       icon: 'check_circle',
     })
 
@@ -130,9 +130,9 @@ async function handleLogin() {
   } catch (error) {
     $q.notify({
       type: 'negative',
-      message: 'Error al iniciar sesión',
-      caption: error.message || error.title || 'Credenciales inválidas',
-      position: 'top',
+      message: 'Credenciales incorrectas',
+      caption: 'Por favor verifica tu correo y contraseña e inténtalo de nuevo',
+      position: 'center',
       icon: 'error',
     })
     console.error('Error en login:', error)

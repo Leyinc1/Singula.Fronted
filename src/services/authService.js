@@ -97,7 +97,27 @@ export async function getCurrentUser() {
     console.log('🔍 Obteniendo perfil del usuario...')
     const response = await apiClient.get('/Usuarios/profile/me')
     console.log('✅ Perfil obtenido:', response.data)
-    return response.data
+    
+    // Mapear respuesta a formato esperado por el frontend
+    const userData = response.data
+    return {
+      id_usuario: userData.id_usuario || userData.id,
+      username: userData.username,
+      correo: userData.correo,
+      nombreCompleto: userData.nombres && userData.apellidos 
+        ? `${userData.nombres} ${userData.apellidos}` 
+        : userData.nombreCompleto,
+      nombres: userData.nombres,
+      apellidos: userData.apellidos,
+      telefono: userData.telefono,
+      documento: userData.documento,
+      biografia: userData.biografia,
+      rol: userData.rol_sistema?.nombre || 'user',
+      id_rol_sistema: userData.id_rol_sistema,
+      estado: userData.estado_usuario?.descripcion || 'Activo',
+      creado_en: userData.creado_en,
+      ultimo_login: userData.ultimo_login
+    }
   } catch (error) {
     console.error('❌ Error obteniendo perfil:', error.response?.data || error)
     throw error.response?.data || { message: 'Error al obtener perfil' }
@@ -109,22 +129,25 @@ export async function getCurrentUser() {
  */
 export async function updateProfile(userData) {
   try {
-    // Formatear datos según el DTO del backend
+    // Formatear datos según la estructura de PostgreSQL
     const profileData = {
-      NombreCompleto: userData.name || userData.NombreCompleto,
-      Telefono: userData.phone || userData.Telefono || null,
-      Biografia: userData.bio || userData.Biografia || null
+      // Datos de tabla personal
+      nombres: userData.nombres || userData.name?.split(' ')[0] || '',
+      apellidos: userData.apellidos || userData.name?.split(' ').slice(1).join(' ') || '',
+      documento: userData.documento || '',
+      telefono: userData.telefono || userData.phone || null,
+      // Campos adicionales si existen
+      biografia: userData.biografia || userData.bio || null
     }
     
     console.log('Actualizando perfil:', profileData)
     const response = await apiClient.put('/Usuarios/profile', profileData)
     
-    // Actualizar localStorage
-    if (response.data) {
-      localStorage.setItem('user', JSON.stringify(response.data))
+    // Retornar datos actualizados
+    return {
+      ...response.data,
+      nombreCompleto: `${profileData.nombres} ${profileData.apellidos}`.trim()
     }
-    
-    return response.data
   } catch (error) {
     console.error('Error actualizando perfil:', error)
     throw error.response?.data || { message: 'Error al actualizar perfil' }
@@ -136,15 +159,15 @@ export async function updateProfile(userData) {
  */
 export async function changePassword(currentPassword, newPassword, confirmPassword = null) {
   try {
-    // Formatear datos según el DTO del backend
+    // Formatear datos según la estructura esperada por el backend
     const passwordData = {
-      ContrasenaActual: currentPassword,
-      NuevaContrasena: newPassword,
-      ConfirmarContrasena: confirmPassword || newPassword
+      contrasenaActual: currentPassword,
+      nuevaContrasena: newPassword,
+      confirmarContrasena: confirmPassword || newPassword
     }
     
     console.log('Cambiando contraseña...')
-    const response = await apiClient.post('/Usuarios/password', passwordData)
+    const response = await apiClient.post('/Usuarios/change-password', passwordData)
     return response.data
   } catch (error) {
     console.error('Error cambiando contraseña:', error)

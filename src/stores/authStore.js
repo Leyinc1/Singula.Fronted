@@ -25,8 +25,13 @@ export const useAuthStore = defineStore('auth', () => {
 
   // Computados
   const isAuthenticated = computed(() => !!token.value)
-  const userName = computed(() => user.value?.nombreCompleto || user.value?.nombre || user.value?.name || 'Usuario')
-  const userEmail = computed(() => user.value?.correo || user.value?.email || '')
+  const userName = computed(() => {
+    if (user.value?.nombreCompleto) return user.value.nombreCompleto
+    if (user.value?.nombres && user.value?.apellidos) return `${user.value.nombres} ${user.value.apellidos}`
+    if (user.value?.username) return user.value.username
+    return 'Usuario'
+  })
+  const userEmail = computed(() => user.value?.correo || '')
   const userRole = computed(() => user.value?.rol || 'user')
 
   // Acciones
@@ -107,7 +112,12 @@ export const useAuthStore = defineStore('auth', () => {
     loading.value = true
     try {
       const result = await authService.updateProfile(userData)
-      user.value = { ...user.value, ...result }
+      // Actualizar el user completo manteniendo los datos existentes
+      user.value = { 
+        ...user.value, 
+        ...result,
+        nombreCompleto: result.nombreCompleto || `${userData.nombres || ''} ${userData.apellidos || ''}`.trim()
+      }
       localStorage.setItem('user', JSON.stringify(user.value))
       return result
     } catch (error) {

@@ -125,11 +125,11 @@
                 <div class="row q-col-gutter-md">
                   <div class="col-12 col-md-6">
                     <q-input
-                      v-model="editForm.name"
+                      v-model="editForm.nombres"
                       filled
-                      label="Nombre Completo"
+                      label="Nombres"
                       bg-color="white"
-                      :rules="[(val) => !!val || 'Nombre requerido']"
+                      :rules="[(val) => !!val || 'Nombres requeridos']"
                     >
                       <template v-slot:prepend>
                         <q-icon name="person" color="black" />
@@ -139,12 +139,27 @@
 
                   <div class="col-12 col-md-6">
                     <q-input
-                      v-model="editForm.email"
+                      v-model="editForm.apellidos"
                       filled
-                      label="Email"
+                      label="Apellidos"
+                      bg-color="white"
+                      :rules="[(val) => !!val || 'Apellidos requeridos']"
+                    >
+                      <template v-slot:prepend>
+                        <q-icon name="person_outline" color="black" />
+                      </template>
+                    </q-input>
+                  </div>
+
+                  <div class="col-12 col-md-6">
+                    <q-input
+                      v-model="user.correo"
+                      filled
+                      label="Correo Electrónico"
                       type="email"
                       bg-color="white"
-                      :rules="[(val) => !!val || 'Email requerido']"
+                      readonly
+                      disable
                     >
                       <template v-slot:prepend>
                         <q-icon name="email" color="black" />
@@ -153,29 +168,29 @@
                   </div>
 
                   <div class="col-12 col-md-6">
-                    <q-input v-model="editForm.phone" filled label="Teléfono" bg-color="white">
+                    <q-input
+                      v-model="editForm.documento"
+                      filled
+                      label="Documento de Identidad"
+                      bg-color="white"
+                    >
+                      <template v-slot:prepend>
+                        <q-icon name="badge" color="black" />
+                      </template>
+                    </q-input>
+                  </div>
+
+                  <div class="col-12 col-md-6">
+                    <q-input v-model="editForm.telefono" filled label="Teléfono" bg-color="white">
                       <template v-slot:prepend>
                         <q-icon name="phone" color="black" />
                       </template>
                     </q-input>
                   </div>
 
-                  <div class="col-12 col-md-6">
-                    <q-input
-                      v-model="editForm.department"
-                      filled
-                      label="Departamento"
-                      bg-color="white"
-                    >
-                      <template v-slot:prepend>
-                        <q-icon name="business" color="black" />
-                      </template>
-                    </q-input>
-                  </div>
-
                   <div class="col-12">
                     <q-input
-                      v-model="editForm.bio"
+                      v-model="editForm.biografia"
                       filled
                       type="textarea"
                       label="Biografía"
@@ -345,11 +360,11 @@ const stats = ref({
 })
 
 const editForm = ref({
-  name: '',
-  email: '',
-  phone: '',
-  department: '',
-  bio: '',
+  nombres: '',
+  apellidos: '',
+  documento: '',
+  telefono: '',
+  biografia: '',
 })
 
 const passwordForm = ref({
@@ -377,11 +392,11 @@ async function loadUserProfile() {
     
     // Poblar formulario con datos actuales
     editForm.value = {
-      name: user.value.nombreCompleto || user.value.name || '',
-      email: user.value.correo || user.value.email || '',
-      phone: user.value.telefono || user.value.phone || '',
-      department: user.value.departamento || user.value.department || '',
-      bio: user.value.biografia || user.value.bio || '',
+      nombres: user.value.nombres || '',
+      apellidos: user.value.apellidos || '',
+      documento: user.value.documento || '',
+      telefono: user.value.telefono || '',
+      biografia: user.value.biografia || '',
     }
   } catch (error) {
     console.error('Error cargando perfil:', error)
@@ -389,7 +404,7 @@ async function loadUserProfile() {
       type: 'negative',
       message: 'Error al cargar perfil',
       caption: error.message || 'No se pudo cargar la información del perfil',
-      position: 'top',
+      position: 'center',
       icon: 'error',
     })
   } finally {
@@ -399,11 +414,11 @@ async function loadUserProfile() {
 
 function resetForm() {
   editForm.value = {
-    name: user.value.nombreCompleto || user.value.name || '',
-    email: user.value.correo || user.value.email || '',
-    phone: user.value.telefono || user.value.phone || '',
-    department: user.value.departamento || user.value.department || '',
-    bio: user.value.biografia || user.value.bio || '',
+    nombres: user.value.nombres || '',
+    apellidos: user.value.apellidos || '',
+    documento: user.value.documento || '',
+    telefono: user.value.telefono || '',
+    biografia: user.value.biografia || '',
   }
 }
 
@@ -413,16 +428,18 @@ async function saveProfile() {
   try {
     // Llamar al authStore para actualizar perfil
     await authStore.updateProfile({
-      name: editForm.value.name,
-      phone: editForm.value.phone,
-      bio: editForm.value.bio
+      nombres: editForm.value.nombres,
+      apellidos: editForm.value.apellidos,
+      documento: editForm.value.documento,
+      telefono: editForm.value.telefono,
+      biografia: editForm.value.biografia
     })
 
     $q.notify({
       type: 'positive',
       message: 'Perfil actualizado',
       caption: 'Los cambios se han guardado exitosamente',
-      position: 'top',
+      position: 'center',
       icon: 'check_circle',
     })
   } catch (error) {
@@ -431,7 +448,7 @@ async function saveProfile() {
       type: 'negative',
       message: 'Error al guardar',
       caption: error.message || error.title || 'No se pudo actualizar el perfil',
-      position: 'top',
+      position: 'center',
       icon: 'error',
     })
   } finally {
@@ -459,7 +476,7 @@ async function changePassword() {
       type: 'positive',
       message: 'Contraseña actualizada',
       caption: 'Tu contraseña ha sido cambiada exitosamente',
-      position: 'top',
+      position: 'center',
       icon: 'check_circle',
     })
 
@@ -475,7 +492,7 @@ async function changePassword() {
       type: 'negative',
       message: 'Error al cambiar contraseña',
       caption: error.message || error.title || 'No se pudo actualizar la contraseña',
-      position: 'top',
+      position: 'center',
       icon: 'error',
     })
   } finally {
