@@ -60,10 +60,6 @@
                   </template>
                 </q-input>
 
-                <div class="row items-center q-mb-lg">
-                  <q-checkbox v-model="loginForm.rememberMe" label="Recordarme" color="black" />
-                </div>
-
                 <q-btn
                   type="submit"
                   color="black"
@@ -74,17 +70,6 @@
                   class="full-width"
                   :loading="loading"
                 />
-
-                <div class="text-center q-mt-md">
-                  <q-btn
-                    flat
-                    dense
-                    color="grey-8"
-                    label="¿Olvidaste tu contraseña?"
-                    size="sm"
-                    @click="handleForgotPassword"
-                  />
-                </div>
               </q-form>
             </q-card-section>
 
@@ -106,7 +91,6 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from 'src/stores/authStore'
-import * as authService from 'src/services/authService'
 
 const router = useRouter()
 const $q = useQuasar()
@@ -115,7 +99,6 @@ const authStore = useAuthStore()
 const loginForm = ref({
   email: '',
   password: '',
-  rememberMe: false,
 })
 
 const showPassword = ref(false)
@@ -156,40 +139,6 @@ async function handleLogin() {
   } finally {
     loading.value = false
   }
-}
-
-function handleForgotPassword() {
-  $q.dialog({
-    title: 'Recuperar Contraseña',
-    message: 'Ingresa tu correo electrónico para recibir instrucciones de recuperación',
-    prompt: {
-      model: '',
-      type: 'email',
-      filled: true,
-      label: 'Correo Electrónico',
-    },
-    cancel: true,
-    persistent: true,
-  }).onOk(async (email) => {
-    try {
-      await authService.requestPasswordReset(email)
-      $q.notify({
-        type: 'positive',
-        message: 'Correo enviado',
-        caption: 'Revisa tu bandeja de entrada para las instrucciones de recuperación',
-        position: 'top',
-        icon: 'mail',
-      })
-    } catch (error) {
-      $q.notify({
-        type: 'negative',
-        message: 'Error',
-        caption: error.message || 'No pudimos enviar el correo',
-        position: 'top',
-        icon: 'error',
-      })
-    }
-  })
 }
 </script>
 
