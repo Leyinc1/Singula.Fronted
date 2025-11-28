@@ -132,4 +132,28 @@ export const slaService = {
       }
     }
   },
+
+  /**
+   * Obtener datos de dashboard específicos para reportes
+   * Filtra por fecha de INGRESO y permite múltiples bloques tech (filtrado en frontend)
+   * @param {Object} filters - Filtros para reportes (startDate, endDate, tipoSolicitud)
+   * @returns {Promise} - Promesa con los datos SLA
+   */
+  async getDashboardDataForReports(filters = {}) {
+    try {
+      const params = {}
+
+      // Enviar fechas y tipo de solicitud al backend
+      if (filters.startDate) params.startDate = filters.startDate
+      if (filters.endDate) params.endDate = filters.endDate
+      if (filters.tipoSolicitud) params.tipoSolicitud = filters.tipoSolicitud
+
+      // NO enviar bloqueTech - se filtra en frontend para permitir múltiples selecciones
+      const response = await apiClient.get('/Reporte/dashboard-data', { params })
+      return response.data
+    } catch (error) {
+      console.error('Error al obtener datos de dashboard para reportes:', error)
+      throw new Error(`No se pudieron cargar los datos: ${error.message}`)
+    }
+  },
 }

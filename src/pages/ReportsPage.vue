@@ -1227,7 +1227,12 @@ function applyFilters() {
     selectedBloquesTech: [...selectedBloquesTech.value]
   })
   
-  slaStore.fetchSlaData()
+  // Usar el nuevo método específico para reportes
+  slaStore.fetchDashboardDataForReports({
+    startDate: reportFilters.value.startDate,
+    endDate: reportFilters.value.endDate,
+    tipoSolicitud: tipoSolicitudParaBackend
+  })
 }
 
 function clearFilters() {
@@ -1321,8 +1326,20 @@ onMounted(async () => {
       
       selectedBloquesTech.value = saved.selectedBloquesTech || ['TODOS']
       
-      // Refrescar datos con los filtros guardados
-      await slaStore.fetchSlaData()
+      // Obtener tipo de solicitud para backend
+      const slaOption = slaTypeOptions.value.find(opt => opt.value === saved.appliedSlaType)
+      let tipoSolicitud = null
+      if (slaOption && slaOption.idTipoSolicitud) {
+        const tiposSolicitudMap = { 1: 'Nuevo Personal', 2: 'Reemplazo' }
+        tipoSolicitud = tiposSolicitudMap[slaOption.idTipoSolicitud]
+      }
+      
+      // Refrescar datos con el nuevo método
+      await slaStore.fetchDashboardDataForReports({
+        startDate: saved.startDate,
+        endDate: saved.endDate,
+        tipoSolicitud: tipoSolicitud
+      })
     } else {
       // Si no hay filtros guardados, aplicar defaults
       if (slaTypeOptions.value.length > 0) {

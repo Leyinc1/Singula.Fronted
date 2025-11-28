@@ -195,7 +195,7 @@ export const useSlaStore = defineStore('sla', () => {
           prioridad: (r.prioridad ?? r.Prioridad ?? null),
           fecha_solicitud: (r.fechaSolicitud ?? r.FechaSolicitud ?? r.fecha_solicitud ?? null),
           fecha_ingreso: (r.fechaIngreso ?? r.FechaIngreso ?? r.fecha_ingreso ?? null),
-          num_dias_sla: (r.numDiasSla ?? r.NumDiasSla ?? r.num_dias_sla ?? null),
+          num_dias_sla: (r.numDiasSla ?? r.NumDiasSla ?? r.num_dias_sla ?? r.diasTranscurridos ?? r.DiasTranscurridos ?? null),
           cumple_sla1: (r.cumpleSla1 ?? r.CumpleSla1 ?? r.cumple_sla1 ?? false),
           cumple_sla2: (r.cumpleSla2 ?? r.CumpleSla2 ?? r.cumple_sla2 ?? false),
           nombre_personal: (r.nombrePersonal ?? r.NombrePersonal ?? r.nombre_personal ?? ''),
@@ -211,6 +211,46 @@ export const useSlaStore = defineStore('sla', () => {
     } catch (err) {
       error.value = err.message || 'Error al cargar los datos SLA'
       console.error('Error fetching SLA data:', err)
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function fetchDashboardDataForReports(reportFilters = {}) {
+    loading.value = true
+    error.value = null
+
+    try {
+      // Llamar al nuevo endpoint específico de reportes
+      const response = await slaService.getDashboardDataForReports(reportFilters)
+      const items = Array.isArray(response) ? response : (response && response.data) ? response.data : []
+
+      // Normalizar campos
+      const normalize = (r) => {
+        return {
+          id_solicitud: (r.id ?? r.idSolicitud ?? r.id_solicitud ?? r.Id ?? r.IdSolicitud ?? null),
+          bloque_tech: (r.bloqueTech ?? r.BloqueTech ?? r.bloque_tech ?? r.bloque ?? null),
+          tipo_solicitud: (r.tipoSolicitud ?? r.TipoSolicitud ?? r.tipo_solicitud ?? null),
+          prioridad: (r.prioridad ?? r.Prioridad ?? null),
+          fecha_solicitud: (r.fechaSolicitud ?? r.FechaSolicitud ?? r.fecha_solicitud ?? null),
+          fecha_ingreso: (r.fechaIngreso ?? r.FechaIngreso ?? r.fecha_ingreso ?? null),
+          num_dias_sla: (r.numDiasSla ?? r.NumDiasSla ?? r.num_dias_sla ?? r.diasTranscurridos ?? r.DiasTranscurridos ?? null),
+          cumple_sla1: (r.cumpleSla1 ?? r.CumpleSla1 ?? r.cumple_sla1 ?? false),
+          cumple_sla2: (r.cumpleSla2 ?? r.CumpleSla2 ?? r.cumple_sla2 ?? false),
+          nombre_personal: (r.nombrePersonal ?? r.NombrePersonal ?? r.nombre_personal ?? ''),
+          dias_umbral_sla: (r.diasUmbralSla ?? r.DiasUmbralSla ?? r.dias_umbral_sla ?? 0),
+          __raw: r,
+        }
+      }
+
+      const normalized = items.map(normalize)
+      slaData.value = normalized
+      allData.value = normalized
+      
+      console.log(`[slaStore] Datos cargados para reportes: ${normalized.length} registros`)
+    } catch (err) {
+      error.value = err.message || 'Error al cargar datos de reportes'
+      console.error('Error fetching dashboard data for reports:', err)
     } finally {
       loading.value = false
     }
@@ -312,6 +352,7 @@ export const useSlaStore = defineStore('sla', () => {
 
     // Acciones
     fetchSlaData,
+    fetchDashboardDataForReports,
     uploadExcelFile,
     createManualEntry,
     setFilters,
