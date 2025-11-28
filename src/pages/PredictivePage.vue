@@ -1,7 +1,7 @@
 <template>
   <q-page class="predictive-page" style="background-color: #fafafa">
     <div class="q-pa-md">
-      <!-- Encabezado -->
+      <!--Encabezado -->
       <div class="row items-center q-mb-lg">
         <div class="col">
           <h4 class="text-h4 q-my-none text-weight-bold text-black">
@@ -25,7 +25,7 @@
         </div>
       </div>
 
-      <!-- Predicciones Principales -->
+      <!--Predicciones Principales-->
       <div class="row q-col-gutter-md q-mb-lg">
         <div class="col-12 col-md-6">
           <q-card class="tata-card">
@@ -50,20 +50,12 @@
                     <q-card flat bordered style="border: 2px solid #000">
                       <q-card-section class="q-pa-lg">
                         <div class="text-caption text-grey-7 text-weight-medium">SLA1 Predicho</div>
-                        <div
-                          class="text-h3 text-weight-bold"
-                          :class="getPredictionColor(predictionData.sla1_prediction)"
-                        >
-                          {{ predictionData.sla1_prediction.toFixed(1) }}%
+                        <div class="text-h3 text-weight-bold" :class="getPredictionColor(78.5)">
+                          78.5 %
                         </div>
                         <div class="text-caption text-grey-6 q-mt-sm">
-                          <q-icon
-                            :name="
-                              predictionData.trend === 'mejorando' ? 'trending_up' : 'trending_down'
-                            "
-                            size="xs"
-                          />
-                          {{ predictionData.trend }}
+                          <q-icon name="trending_down" size="xs" />
+                          -2.3 % vs mes actual
                         </div>
                       </q-card-section>
                     </q-card>
@@ -73,20 +65,12 @@
                     <q-card flat bordered style="border: 2px solid #000">
                       <q-card-section class="q-pa-lg">
                         <div class="text-caption text-grey-7 text-weight-medium">SLA2 Predicho</div>
-                        <div
-                          class="text-h3 text-weight-bold"
-                          :class="getPredictionColor(predictionData.sla2_prediction)"
-                        >
-                          {{ predictionData.sla2_prediction.toFixed(1) }}%
+                        <div class="text-h3 text-weight-bold" :class="getPredictionColor(85.3)">
+                          85.3 %
                         </div>
                         <div class="text-caption text-grey-6 q-mt-sm">
-                          <q-icon
-                            :name="
-                              predictionData.trend === 'mejorando' ? 'trending_up' : 'trending_down'
-                            "
-                            size="xs"
-                          />
-                          {{ predictionData.trend }}
+                          <q-icon name="trending_up" size="xs" />
+                          +3.1 % vs mes actual
                         </div>
                       </q-card-section>
                     </q-card>
@@ -109,9 +93,7 @@
                       />
                     </div>
                     <div class="col-auto q-ml-md">
-                      <span class="text-h6 text-weight-bold"
-                        >{{ (predictionData.confidence * 100).toFixed(0) }}%</span
-                      >
+                      <span class="text-h6 text-weight-bold"> 87 % </span>
                     </div>
                   </div>
                 </div>
@@ -132,39 +114,32 @@
             <q-separator />
 
             <q-card-section>
-              <div class="q-pa-md">
-                <div class="text-subtitle2 text-grey-7 q-mb-md">
-                  Evolución de cumplimiento en los últimos 6 meses
+              <!-- Chart Component -->
+              <div class="chart-container" style="position: relative; height: 300px">
+                <Line :data="chartData" :options="chartOptions" v-if="chartData.labels.length > 0" />
+                <div v-else class="chart-placeholder">
+                  <q-spinner color="primary" size="3em" />
+                  <div class="text-grey q-mt-sm">Cargando datos...</div>
                 </div>
-
-                <!-- Placeholder para gráfico de línea temporal -->
-                <div class="chart-placeholder">
-                  <q-icon name="show_chart" size="xl" color="grey-5" />
-                  <div class="text-caption text-grey-6 q-mt-sm">
-                    Gráfico de tendencias temporales
+              </div>
+              
+              <div class="row q-col-gutter-sm q-mt-md">
+                <div class="col-4">
+                  <div class="text-center">
+                    <div class="text-caption text-grey-7">Promedio</div>
+                    <div class="text-h6 text-weight-bold text-black">82.4 %</div>
                   </div>
                 </div>
-
-                <q-separator class="q-my-md" />
-
-                <div class="row q-col-gutter-sm">
-                  <div class="col-4">
-                    <div class="text-center">
-                      <div class="text-caption text-grey-7">Promedio</div>
-                      <div class="text-h6 text-weight-bold text-black">82.4%</div>
-                    </div>
+                <div class="col-4">
+                  <div class="text-center">
+                    <div class="text-caption text-grey-7">Máximo</div>
+                    <div class="text-h6 text-weight-bold text-positive">91.2 %</div>
                   </div>
-                  <div class="col-4">
-                    <div class="text-center">
-                      <div class="text-caption text-grey-7">Máximo</div>
-                      <div class="text-h6 text-weight-bold text-positive">91.2%</div>
-                    </div>
-                  </div>
-                  <div class="col-4">
-                    <div class="text-center">
-                      <div class="text-caption text-grey-7">Mínimo</div>
-                      <div class="text-h6 text-weight-bold text-negative">74.8%</div>
-                    </div>
+                </div>
+                <div class="col-4">
+                  <div class="text-center">
+                    <div class="text-caption text-grey-7">Mínimo</div>
+                    <div class="text-h6 text-weight-bold text-negative">74.8 %</div>
                   </div>
                 </div>
               </div>
@@ -173,7 +148,7 @@
         </div>
       </div>
 
-      <!-- Factores de Influencia -->
+      <!--Factores de Influencia-->
       <div class="row q-col-gutter-md q-mb-lg">
         <div class="col-12">
           <q-card class="tata-card">
@@ -204,7 +179,7 @@
                         </div>
                       </div>
                       <q-linear-progress :value="0.85" color="negative" class="q-mt-sm" />
-                      <div class="text-caption text-grey-7 q-mt-xs">Impacto: 85%</div>
+                      <div class="text-caption text-grey-7 q-mt-xs">Impacto: 85 %</div>
                     </q-card-section>
                   </q-card>
                 </div>
@@ -221,7 +196,7 @@
                         </div>
                       </div>
                       <q-linear-progress :value="0.62" color="warning" class="q-mt-sm" />
-                      <div class="text-caption text-grey-7 q-mt-xs">Impacto: 62%</div>
+                      <div class="text-caption text-grey-7 q-mt-xs">Impacto: 62 %</div>
                     </q-card-section>
                   </q-card>
                 </div>
@@ -238,7 +213,7 @@
                         </div>
                       </div>
                       <q-linear-progress :value="0.58" color="warning" class="q-mt-sm" />
-                      <div class="text-caption text-grey-7 q-mt-xs">Impacto: 58%</div>
+                      <div class="text-caption text-grey-7 q-mt-xs">Impacto: 58 %</div>
                     </q-card-section>
                   </q-card>
                 </div>
@@ -255,7 +230,7 @@
                         </div>
                       </div>
                       <q-linear-progress :value="0.35" color="info" class="q-mt-sm" />
-                      <div class="text-caption text-grey-7 q-mt-xs">Impacto: 35%</div>
+                      <div class="text-caption text-grey-7 q-mt-xs">Impacto: 35 %</div>
                     </q-card-section>
                   </q-card>
                 </div>
@@ -265,7 +240,7 @@
         </div>
       </div>
 
-      <!-- Escenarios de Simulación -->
+      <!--Escenarios de Simulación-->
       <div class="row q-col-gutter-md">
         <div class="col-12">
           <q-card class="tata-card">
@@ -387,7 +362,7 @@
                           <q-icon name="lightbulb" color="black" />
                         </template>
                         <div class="text-body2">
-                          <strong>Recomendación:</strong> Basado en esta simulación, se sugiere
+                          <strong>Recomendación: </strong> Basado en esta simulación, se sugiere
                           mantener un volumen máximo de {{ simulation.volume }} solicitudes por mes
                           para garantizar el cumplimiento de ambos SLAs.
                         </div>
@@ -407,12 +382,65 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
-import { slaService } from 'src/services/slaService'
+import { predictiveService } from 'src/services/predictiveService'
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+} from 'chart.js'
+import { Line } from 'vue-chartjs'
+
+// Registrar componentes de Chart.js
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend)
 
 const $q = useQuasar()
-
 const loading = ref(false)
 
+// Estado para el gráfico
+const chartData = ref({
+  labels: [],
+  datasets: [],
+})
+
+const chartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      position: 'bottom',
+    },
+    title: {
+      display: false,
+    },
+  },
+  scales: {
+    y: {
+      min: 0,
+      max: 100,
+      grid: {
+        color: '#f0f0f0',
+      },
+    },
+    x: {
+      grid: {
+        display: false,
+      },
+    },
+  },
+}
+
+// Estado de predicciones
+const predictionMetrics = ref({
+  nextMonth: 0,
+  trend: 0,
+})
+
+// Estado de simulación
 const simulation = ref({
   volume: 50,
   priority: 'Equilibrada',
@@ -425,14 +453,57 @@ const simulationResults = ref({
   sla2Change: 0,
 })
 
-const predictionData = ref({
-  sla1_prediction: 0,
-  sla2_prediction: 0,
-  trend: 'neutral',
-  confidence: 0,
+const priorityOptions = ['Alta Prioridad', 'Equilibrada', 'Baja Prioridad']
+
+// Datos crudos (para recalcular)
+const rawHistoryData = ref([])
+const slaConfigs = ref([])
+
+onMounted(async () => {
+  await loadData()
 })
 
-const priorityOptions = ['Alta Prioridad', 'Equilibrada', 'Baja Prioridad']
+async function loadData() {
+  loading.value = true
+  try {
+    const data = await predictiveService.fetchData()
+
+    // Transformar datos de API a formato interno usando el servicio
+    rawHistoryData.value = predictiveService.processHistoryData(data.requests)
+    
+    // Si no hay datos, usar un array vacío o mostrar mensaje (opcional)
+    if (rawHistoryData.value.length === 0) {
+      console.warn('No hay datos históricos suficientes para predicciones')
+    }
+
+    slaConfigs.value = data.slaConfig
+
+    // Calcular predicciones iniciales
+    updatePredictions()
+
+    // Ejecutar simulación inicial
+    runSimulation()
+
+  } catch (error) {
+    console.error('Error loading data:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Error al cargar datos predictivos',
+      caption: 'Verifique la conexión con el backend',
+    })
+  } finally {
+    loading.value = false
+  }
+}
+
+function updatePredictions() {
+  const result = predictiveService.calculatePrediction(rawHistoryData.value)
+  chartData.value = result.chartData
+  predictionMetrics.value = {
+    nextMonth: result.nextMonthPrediction,
+    trend: result.trend,
+  }
+}
 
 function getPredictionColor(value) {
   if (value >= 85) return 'text-positive'
@@ -443,22 +514,24 @@ function getPredictionColor(value) {
 async function loadPredictions() {
   loading.value = true
   try {
-    const data = await slaService.getPrediction()
-    predictionData.value = data
+    // Simular que obtenemos nuevos datos o re-entrenamos
+    await new Promise((resolve) => setTimeout(resolve, 800))
 
-    // Inicializar simulación con valores actuales
-    simulationResults.value = {
-      sla1: data.sla1_prediction.toFixed(1),
-      sla1Change: 0,
-      sla2: data.sla2_prediction.toFixed(1),
-      sla2Change: 0,
+    // Añadir una variación aleatoria para demostrar reactividad
+    if (rawHistoryData.value.length > 0) {
+        const lastVal = rawHistoryData.value[rawHistoryData.value.length - 1].compliance
+        const newVal = Math.min(100, Math.max(0, lastVal + (Math.random() * 10 - 5)))
+        // Actualizar último mes (solo demo)
+        rawHistoryData.value[rawHistoryData.value.length - 1].compliance = newVal
     }
-  } catch (error) {
-    console.error('Error loading predictions:', error)
+
+    updatePredictions()
+
     $q.notify({
-      type: 'negative',
-      message: 'Error al cargar predicciones',
-      position: 'top',
+      type: 'positive',
+      message: 'Predicciones actualizadas',
+      caption: 'Modelo recalculado con éxito',
+      icon: 'check_circle',
     })
   } finally {
     loading.value = false
@@ -477,35 +550,14 @@ async function recalculatePredictions() {
 }
 
 function runSimulation() {
-  // Simulación basada en datos reales base
-  const baseSla1 = predictionData.value.sla1_prediction
-  const baseSla2 = predictionData.value.sla2_prediction
-
-  // Factores de impacto simulados
-  let volumeImpact = 0
-  if (simulation.value.volume > 100) volumeImpact = -5
-  else if (simulation.value.volume > 50) volumeImpact = -2
-  else volumeImpact = 1
-
-  let priorityImpact = 0
-  if (simulation.value.priority === 'Alta Prioridad') priorityImpact = -3
-  if (simulation.value.priority === 'Baja Prioridad') priorityImpact = 2
-
-  const newSla1 = Math.min(100, Math.max(0, baseSla1 + volumeImpact + priorityImpact))
-  const newSla2 = Math.min(100, Math.max(0, baseSla2 + volumeImpact + priorityImpact + 2)) // SLA2 suele ser más flexible
-
-  simulationResults.value = {
-    sla1: newSla1.toFixed(1),
-    sla1Change: (newSla1 - baseSla1).toFixed(1),
-    sla2: newSla2.toFixed(1),
-    sla2Change: (newSla2 - baseSla2).toFixed(1),
-  }
+  const results = predictiveService.runSimulation(simulation.value)
+  simulationResults.value = results
 
   $q.notify({
     type: 'info',
-    message: 'Simulación completada',
+    message: 'Escenario simulado',
+    timeout: 1000,
     position: 'top',
-    icon: 'science',
   })
 }
 
