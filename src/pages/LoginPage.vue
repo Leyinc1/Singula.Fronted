@@ -30,16 +30,16 @@
                 </div>
 
                 <q-input
-                  v-model="loginForm.username"
+                  v-model="loginForm.email"
                   filled
-                  label="Usuario"
-                  type="text"
+                  label="Correo Electrónico"
+                  type="email"
                   bg-color="white"
                   class="q-mb-md"
-                  :rules="[(val) => !!val || 'Usuario requerido']"
+                  :rules="[(val) => !!val || 'Correo requerido', (val) => /.+@.+\..+/.test(val) || 'Correo no válido']"
                 >
                   <template v-slot:prepend>
-                    <q-icon name="person" color="black" />
+                    <q-icon name="email" color="black" />
                   </template>
                 </q-input>
 
@@ -80,7 +80,25 @@
                 />
 
                 <div class="text-center q-mt-md">
-                  <q-btn flat dense color="grey-8" label="¿Olvidaste tu contraseña?" size="sm" />
+                  <q-btn
+                    flat
+                    dense
+                    color="grey-8"
+                    label="¿Olvidaste tu contraseña?"
+                    size="sm"
+                    @click="handleForgotPassword"
+                  />
+                </div>
+
+                <q-separator class="q-my-md" />
+
+                <div class="text-center">
+                  <span class="text-caption text-grey-8">
+                    ¿No tienes cuenta?
+                    <router-link to="/register" class="text-primary text-weight-bold">
+                      Regístrate aquí
+                    </router-link>
+                  </span>
                 </div>
               </q-form>
             </q-card-section>
@@ -103,13 +121,14 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from 'src/stores/authStore'
+import * as authService from 'src/services/authService'
 
 const router = useRouter()
 const $q = useQuasar()
 const authStore = useAuthStore()
 
 const loginForm = ref({
-  username: '',
+  email: '',
   password: '',
   rememberMe: false,
 })
@@ -121,20 +140,19 @@ async function handleLogin() {
   loading.value = true
 
   try {
-    // Simular delay de red
-    await new Promise((resolve) => setTimeout(resolve, 800))
+    // Crear objeto de credenciales con el formato correcto
+    const credentials = {
+      correo: loginForm.value.email,     // mapear email a correo
+      password: loginForm.value.password
+    }
 
-    // Nota: En esta versión mock, cualquier usuario/contraseña es válido
-    // En producción, esto validará contra el backend
-    await authStore.login({
-      username: loginForm.value.username,
-      email: loginForm.value.username + '@tcs.com',
-    })
+    // Llamar al authStore con las credenciales
+    const result = await authStore.login(credentials)
 
     $q.notify({
       type: 'positive',
-      message: '¡Bienvenido a SINGULA!',
-      caption: 'Inicio de sesión exitoso',
+      message: '¡Inicio de sesión exitoso!',
+      caption: `Bienvenido ${result.user?.nombre || 'Usuario'}`,
       position: 'top',
       icon: 'check_circle',
     })
@@ -145,13 +163,48 @@ async function handleLogin() {
     $q.notify({
       type: 'negative',
       message: 'Error al iniciar sesión',
-      caption: error.message || 'Credenciales inválidas',
+      caption: error.message || error.title || 'Credenciales inválidas',
       position: 'top',
       icon: 'error',
     })
+    console.error('Error en login:', error)
   } finally {
     loading.value = false
   }
+}
+
+function handleForgotPassword() {
+  $q.dialog({
+    title: 'Recuperar Contraseña',
+    message: 'Ingresa tu correo electrónico para recibir instrucciones de recuperación',
+    prompt: {
+      model: '',
+      type: 'email',
+      filled: true,
+      label: 'Correo Electrónico',
+    },
+    cancel: true,
+    persistent: true,
+  }).onOk(async (email) => {
+    try {
+      await authService.requestPasswordReset(email)
+      $q.notify({
+        type: 'positive',
+        message: 'Correo enviado',
+        caption: 'Revisa tu bandeja de entrada para las instrucciones de recuperación',
+        position: 'top',
+        icon: 'mail',
+      })
+    } catch (error) {
+      $q.notify({
+        type: 'negative',
+        message: 'Error',
+        caption: error.message || 'No pudimos enviar el correo',
+        position: 'top',
+        icon: 'error',
+      })
+    }
+  })
 }
 </script>
 

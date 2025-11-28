@@ -1,5 +1,8 @@
 <template>
   <q-page class="profile-page" style="background-color: #fafafa">
+    <!-- Loading Spinner -->
+    <q-inner-loading :showing="loading" label="Cargando perfil..." label-style="font-size: 1.1em" />
+    
     <div class="q-pa-md">
       <!-- Encabezado -->
       <div class="row items-center q-mb-lg">
@@ -24,15 +27,15 @@
                 <div class="text-h3">{{ userInitials }}</div>
               </q-avatar>
 
-              <div class="text-h5 text-weight-bold text-black">{{ user.name }}</div>
-              <div class="text-body2 text-grey-7 q-mt-xs">{{ user.email }}</div>
+              <div class="text-h5 text-weight-bold text-black">{{ user.nombreCompleto || user.name || 'Usuario' }}</div>
+              <div class="text-body2 text-grey-7 q-mt-xs">{{ user.correo || user.email || 'No definido' }}</div>
 
               <q-separator class="q-my-md" />
 
               <div class="row items-center justify-center q-mb-xs">
                 <q-icon name="badge" class="q-mr-sm" color="black" size="sm" />
                 <span class="text-body2 text-weight-medium">{{
-                  user.role === 'admin' ? 'Administrador' : 'Usuario'
+                  user.rol === 'admin' || user.role === 'admin' ? 'Administrador' : 'Usuario'
                 }}</span>
               </div>
 
@@ -319,7 +322,7 @@ const authStore = useAuthStore()
 
 const user = computed(() => authStore.user || {})
 const userInitials = computed(() => {
-  const name = user.value.name || 'User'
+  const name = user.value.nombreCompleto || user.value.name || 'User'
   return name
     .split(' ')
     .map((n) => n[0])
@@ -329,7 +332,10 @@ const userInitials = computed(() => {
 })
 
 const memberSince = computed(() => {
-  return 'Nov 2025' // En producción, calcular desde user.createdAt
+  // En producción, calcular desde user.fechaCreacion o user.createdAt
+  return user.value.fechaCreacion 
+    ? new Date(user.value.fechaCreacion).toLocaleDateString('es-ES', { year: 'numeric', month: 'long' })
+    : 'Nov 2025'
 })
 
 const stats = ref({
@@ -357,25 +363,47 @@ const showNewPassword = ref(false)
 const showConfirmPassword = ref(false)
 const saving = ref(false)
 const changingPassword = ref(false)
+const loading = ref(false)
 
-onMounted(() => {
-  // Cargar datos del usuario en el formulario
-  editForm.value = {
-    name: user.value.name || '',
-    email: user.value.email || '',
-    phone: user.value.phone || '',
-    department: user.value.department || 'Tecnología',
-    bio: user.value.bio || '',
-  }
+onMounted(async () => {
+  await loadUserProfile()
 })
+
+async function loadUserProfile() {
+  loading.value = true
+  try {
+    // Cargar perfil completo desde la API
+    await authStore.getCurrentUser()
+    
+    // Poblar formulario con datos actuales
+    editForm.value = {
+      name: user.value.nombreCompleto || user.value.name || '',
+      email: user.value.correo || user.value.email || '',
+      phone: user.value.telefono || user.value.phone || '',
+      department: user.value.departamento || user.value.department || '',
+      bio: user.value.biografia || user.value.bio || '',
+    }
+  } catch (error) {
+    console.error('Error cargando perfil:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Error al cargar perfil',
+      caption: error.message || 'No se pudo cargar la información del perfil',
+      position: 'top',
+      icon: 'error',
+    })
+  } finally {
+    loading.value = false
+  }
+}
 
 function resetForm() {
   editForm.value = {
-    name: user.value.name || '',
-    email: user.value.email || '',
-    phone: user.value.phone || '',
-    department: user.value.department || 'Tecnología',
-    bio: user.value.bio || '',
+    name: user.value.nombreCompleto || user.value.name || '',
+    email: user.value.correo || user.value.email || '',
+    phone: user.value.telefono || user.value.phone || '',
+    department: user.value.departamento || user.value.department || '',
+    bio: user.value.biografia || user.value.bio || '',
   }
 }
 
@@ -383,13 +411,11 @@ async function saveProfile() {
   saving.value = true
 
   try {
-    // Simular delay de red
-    await new Promise((resolve) => setTimeout(resolve, 800))
-
-    // Actualizar el store
-    authStore.setUser({
-      ...user.value,
-      ...editForm.value,
+    // Llamar al authStore para actualizar perfil
+    await authStore.updateProfile({
+      name: editForm.value.name,
+      phone: editForm.value.phone,
+      bio: editForm.value.bio
     })
 
     $q.notify({
@@ -400,10 +426,11 @@ async function saveProfile() {
       icon: 'check_circle',
     })
   } catch (error) {
+    console.error('Error guardando perfil:', error)
     $q.notify({
       type: 'negative',
       message: 'Error al guardar',
-      caption: error.message || 'No se pudo actualizar el perfil',
+      caption: error.message || error.title || 'No se pudo actualizar el perfil',
       position: 'top',
       icon: 'error',
     })
@@ -416,10 +443,17 @@ async function changePassword() {
   changingPassword.value = true
 
   try {
-    // Simular delay de red
-    await new Promise((resolve) => setTimeout(resolve, 800))
+    // Validar que las contraseñas coincidan
+    if (passwordForm.value.newPassword !== passwordForm.value.confirmPassword) {
+      throw new Error('Las contraseñas no coinciden')
+    }
 
-    // Aquí iría la llamada al backend para cambiar la contraseña
+    // Llamar al authStore para cambiar contraseña
+    await authStore.changePassword(
+      passwordForm.value.currentPassword,
+      passwordForm.value.newPassword,
+      passwordForm.value.confirmPassword
+    )
 
     $q.notify({
       type: 'positive',
@@ -436,10 +470,11 @@ async function changePassword() {
       confirmPassword: '',
     }
   } catch (error) {
+    console.error('Error cambiando contraseña:', error)
     $q.notify({
       type: 'negative',
       message: 'Error al cambiar contraseña',
-      caption: error.message || 'No se pudo actualizar la contraseña',
+      caption: error.message || error.title || 'No se pudo actualizar la contraseña',
       position: 'top',
       icon: 'error',
     })

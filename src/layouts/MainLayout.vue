@@ -137,12 +137,20 @@ const menuLinks = computed(() => {
   ]
 
   if (isAdmin.value) {
-    links.push({
-      title: 'Configuración',
-      caption: 'Gestionar bloques y opciones',
-      icon: 'settings',
-      link: '/config',
-    })
+    links.push(
+      {
+        title: 'Gestión de Usuarios',
+        caption: 'Crear y administrar usuarios',
+        icon: 'people',
+        link: '/users',
+      },
+      {
+        title: 'Configuración',
+        caption: 'Gestionar bloques y opciones',
+        icon: 'settings',
+        link: '/config',
+      },
+    )
   }
 
   return links
