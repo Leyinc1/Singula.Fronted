@@ -346,9 +346,21 @@ export const useSlaStore = defineStore('sla', () => {
     error.value = null
     try {
       const response = await slaService.uploadExcel(file)
+      console.log('📥 Resultado de importación:', response)
+
+      // Verificar si la importación fue exitosa
+      if (response.import) {
+        console.log(`✅ Importados: ${response.import.importedRows} de ${response.import.totalRows}`)
+        console.log(`❌ Fallidos: ${response.import.failedRows}`)
+        if (response.import.errors && response.import.errors.length > 0) {
+          console.error('Errores:', response.import.errors)
+        }
+      }
+
       await fetchSlaData()
       return response
     } catch (err) {
+      console.error('Error al cargar archivo Excel:', err)
       error.value = err.message || 'Error al cargar el archivo Excel'
       throw err
     } finally {

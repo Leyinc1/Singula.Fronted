@@ -49,15 +49,18 @@
                   El archivo Excel debe contener las siguientes columnas:
                   <ul class="q-my-sm">
                     <li>
-                      <strong>bloque_tech</strong>: Nombre del bloque tecnológico (Backend,
-                      Frontend, QA, Mobile, DevOps, Data)
+                      <strong>AREA</strong> ✅ OBLIGATORIO: Nombre del área o departamento (ej: Desarrollo Backend, QA, Infraestructura)
                     </li>
-                    <li><strong>tipo_solicitud</strong>: Nuevo Personal o Reemplazo</li>
-                    <li><strong>prioridad</strong>: Crítica, Alta, Media o Baja</li>
-                    <li><strong>fecha_solicitud</strong>: Fecha de la solicitud (YYYY-MM-DD)</li>
-                    <li><strong>nombre_personal</strong>: Nombre de la persona (opcional)</li>
+                    <li><strong>Fecha Solicitud</strong> ✅ OBLIGATORIO: Fecha de la solicitud (DD/MM/YYYY o YYYY-MM-DD)</li>
+                    <li><strong>Tipo de Solicitud</strong> ⚪ Opcional: Nuevo Personal o Reemplazo (por defecto se asigna automáticamente)</li>
+                    <li><strong>Prioridad</strong> ⚪ Opcional: Crítica, Alta, Media o Baja (por defecto: Media)</li>
+                    <li><strong>Fecha de Ingreso</strong> ⚪ Opcional: Fecha de ingreso (DD/MM/YYYY o YYYY-MM-DD)</li>
+                    <li><strong>Nombre Personal</strong> ⚪ Opcional: Nombre de la persona</li>
+                    <li><strong>Observaciones</strong> ⚪ Opcional: Comentarios adicionales</li>
                   </ul>
-                  Si el bloque no existe en el sistema, se te pedirá crearlo.
+                  <div class="q-mt-sm text-weight-bold">
+                    📥 Descarga la plantilla: <a href="/plantilla_carga_sla.xlsx" download class="text-primary">plantilla_carga_sla.xlsx</a>
+                  </div>
                 </div>
               </q-banner>
             </div>
