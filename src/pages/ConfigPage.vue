@@ -9,7 +9,7 @@
             Configuración del Sistema
           </h4>
           <p class="text-grey-8 q-mt-sm q-mb-none" style="font-weight: 400">
-            Gestiona bloques tecnológicos, prioridades y tipos de solicitud de forma centralizada
+            Gestiona áreas, prioridades y tipos de SLA de forma centralizada
           </p>
         </div>
       </div>
@@ -23,7 +23,7 @@
                 <div class="col">
                   <div class="text-h6 text-weight-bold">
                     <q-icon name="business_center" class="q-mr-sm" />
-                    Bloques Tecnológicos
+                    Áreas
                   </div>
                 </div>
                 <div class="col-auto">
@@ -31,7 +31,7 @@
                     flat
                     dense
                     icon="add"
-                    label="Nuevo Bloque"
+                    label="Nueva Área"
                     @click="abrirDialogNuevoBloque"
                     color="white"
                   />
@@ -230,7 +230,7 @@
                 <div class="col">
                   <div class="text-h6 text-weight-bold">
                     <q-icon name="assignment" class="q-mr-sm" />
-                    Tipos de Solicitud
+                    Tipos de SLA
                   </div>
                 </div>
                 <div class="col-auto">
@@ -238,7 +238,7 @@
                     flat
                     dense
                     icon="add"
-                    label="Nuevo Tipo"
+                    label="Nuevo Tipo de SLA"
                     @click="dialogNuevoTipo = true"
                     color="white"
                   />
@@ -325,7 +325,7 @@
       <q-card style="min-width: 400px">
         <q-card-section class="bg-black text-white">
           <div class="text-h6">
-            {{ modoEdicion ? 'Editar Bloque' : 'Agregar Nuevo Bloque Tecnológico' }}
+            {{ modoEdicion ? 'Editar Área' : 'Agregar Nueva Área' }}
           </div>
         </q-card-section>
 
@@ -335,7 +335,7 @@
           <q-input
             v-model="nuevoBloque.nombre"
             filled
-            label="Nombre del Bloque Tecnológico *"
+            label="Nombre del Área *"
             bg-color="white"
             class="q-mb-md"
             hint="Ejemplo: Backend, Frontend, QA, Mobile, etc."
@@ -524,7 +524,7 @@
       <q-card style="min-width: 400px">
         <q-card-section class="bg-black text-white">
           <div class="text-h6">
-            {{ modoEdicionTipo ? 'Editar Tipo de Solicitud' : 'Agregar Nuevo Tipo de Solicitud' }}
+            {{ modoEdicionTipo ? 'Editar Tipo de SLA' : 'Agregar Nuevo Tipo de SLA' }}
           </div>
         </q-card-section>
 
@@ -534,7 +534,7 @@
           <q-input
             v-model="nuevoTipo.nombre"
             filled
-            label="Nombre del Tipo *"
+            label="Nombre del Tipo de SLA *"
             bg-color="white"
             class="q-mb-md"
           >

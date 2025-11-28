@@ -65,7 +65,7 @@
               <q-select
                 v-model="localFilters.bloqueTech"
                 filled
-                label="BLOQUE TECH"
+                label="ÁREAS"
                 :options="bloquesOptions"
                 multiple
                 use-chips
@@ -95,7 +95,7 @@
               <q-select
                 v-model="localFilters.tipoSolicitud"
                 filled
-                label="Tipo Solicitud"
+                label="Tipo de SLA"
                 :options="tipoSolicitudOptions"
                 multiple
                 use-chips
@@ -194,7 +194,7 @@
 
       <!-- KPIs Dinámicos -->
       <div class="row q-col-gutter-md q-mb-lg">
-        <!-- KPIs por Tipo de Solicitud (Dinámico) -->
+        <!-- KPIs por Tipo de SLA (Dinámico) -->
         <div
           v-for="(kpi, tipo) in kpisPorTipo"
           :key="tipo"
@@ -243,7 +243,7 @@
       <!-- Gráfico Principal -->
       <div class="row q-col-gutter-md q-mb-lg">
         <div class="col-12 col-lg-6">
-          <SlaChart :data="chartDataByRole" :loading="loading" title="Cumplimiento SLA por Rol" />
+          <SlaChart :data="chartDataByRole" :loading="loading" title="Cumplimiento SLA por Área" />
         </div>
         <div class="col-12 col-lg-6">
           <PriorityChart :data="chartDataByPriority" :loading="loading" />

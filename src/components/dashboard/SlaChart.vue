@@ -64,7 +64,7 @@ const props = defineProps({
   },
   subtitle: {
     type: String,
-    default: 'Porcentaje de cumplimiento por tipo de solicitud',
+    default: 'Porcentaje de cumplimiento por tipo de SLA',
   },
   chartHeight: {
     type: Number,
