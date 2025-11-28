@@ -68,7 +68,7 @@ export const useConfigStore = defineStore('config', () => {
 
   const prioridadesOptions = computed(() =>
     prioridades.value
-      .filter(p => p.activo)
+      .filter((p) => p.activo)
       .map((p) => ({
         label: p.nombre,
         value: p.nombre,
@@ -79,7 +79,7 @@ export const useConfigStore = defineStore('config', () => {
 
   const tiposSolicitudOptions = computed(() =>
     tiposSolicitud.value
-      .filter(t => t.activo)
+      .filter((t) => t.activo)
       .map((t) => ({
         label: t.nombre,
         value: t.nombre,
@@ -179,9 +179,9 @@ export const useConfigStore = defineStore('config', () => {
 
       // Sincronizar con bloques locales
       if (response.data && response.data.length > 0) {
-        response.data.forEach(area => {
+        response.data.forEach((area) => {
           // Buscar por backendId en lugar de nombre para manejar cambios de nombre
-          const existing = bloques.value.find(b => b.backendId === area.idArea)
+          const existing = bloques.value.find((b) => b.backendId === area.idArea)
           if (!existing) {
             // Crear nuevo bloque si no existe
             bloques.value.push({
@@ -189,10 +189,10 @@ export const useConfigStore = defineStore('config', () => {
               nombre: area.nombreArea,
               descripcion: area.descripcion || `Área ${area.nombreArea}`,
               departamento: 'Tech',
-              color: '#' + Math.floor(Math.random()*16777215).toString(16),
+              color: '#' + Math.floor(Math.random() * 16777215).toString(16),
               icon: 'business',
               activo: area.activo !== undefined ? area.activo : true,
-              backendId: area.idArea
+              backendId: area.idArea,
             })
           } else {
             // Actualizar TODOS los datos del bloque existente
@@ -220,7 +220,7 @@ export const useConfigStore = defineStore('config', () => {
     try {
       const areaDto = {
         NombreArea: bloqueData.nombre,
-        Descripcion: bloqueData.descripcion || ''
+        Descripcion: bloqueData.descripcion || '',
       }
       const response = await configService.createArea(areaDto)
 
@@ -229,7 +229,7 @@ export const useConfigStore = defineStore('config', () => {
         ...bloqueData,
         id: response.data.idArea,
         backendId: response.data.idArea,
-        activo: true
+        activo: true,
       })
 
       return response.data
@@ -247,13 +247,18 @@ export const useConfigStore = defineStore('config', () => {
   async function updateAreaBackend(bloqueId, bloqueData) {
     loading.value = true
     try {
-      const bloque = bloques.value.find(b => b.id === bloqueId || b.backendId === bloqueId)
+      const bloque = bloques.value.find((b) => b.id === bloqueId || b.backendId === bloqueId)
       const backendId = bloque?.backendId || bloqueId
 
       const areaDto = {
         NombreArea: bloqueData.NombreArea || bloqueData.nombre || bloque?.nombre || '',
         Descripcion: bloqueData.Descripcion || bloqueData.descripcion || bloque?.descripcion || '',
-        Activo: bloqueData.Activo !== undefined ? bloqueData.Activo : (bloque?.activo !== undefined ? bloque.activo : true)
+        Activo:
+          bloqueData.Activo !== undefined
+            ? bloqueData.Activo
+            : bloque?.activo !== undefined
+              ? bloque.activo
+              : true,
       }
 
       const response = await configService.updateArea(backendId, areaDto)
@@ -276,13 +281,13 @@ export const useConfigStore = defineStore('config', () => {
   async function deleteAreaBackend(bloqueId) {
     loading.value = true
     try {
-      const bloque = bloques.value.find(b => b.id === bloqueId || b.backendId === bloqueId)
+      const bloque = bloques.value.find((b) => b.id === bloqueId || b.backendId === bloqueId)
       const backendId = bloque?.backendId || bloqueId
 
       await configService.deleteArea(backendId)
 
       // Eliminar de bloques locales
-      const index = bloques.value.findIndex(b => b.id === bloqueId || b.backendId === bloqueId)
+      const index = bloques.value.findIndex((b) => b.id === bloqueId || b.backendId === bloqueId)
       if (index !== -1) {
         bloques.value.splice(index, 1)
       }
@@ -314,7 +319,7 @@ export const useConfigStore = defineStore('config', () => {
       // Sincronizar con tipos locales
       if (response.data && response.data.length > 0) {
         // Crear un nuevo array para forzar reactividad de Vue
-        const nuevosTipos = response.data.map(tipo => ({
+        const nuevosTipos = response.data.map((tipo) => ({
           id: tipo.idTipoSolicitud,
           nombre: tipo.descripcion,
           descripcion: tipo.descripcion || '',
@@ -322,16 +327,28 @@ export const useConfigStore = defineStore('config', () => {
           icon: getIconForTipo(tipo.descripcion),
           color: getColorForTipo(tipo.descripcion),
           activo: tipo.activo !== undefined ? tipo.activo : true,
-          backendId: tipo.idTipoSolicitud
+          backendId: tipo.idTipoSolicitud,
         }))
 
         // Reemplazar el array completo para asegurar reactividad
         tiposSolicitud.value = nuevosTipos
 
-        console.log('✅ [loadTiposSolicitudFromBackend] tiposSolicitud después del map:', tiposSolicitud.value)
-        console.log('📊 [loadTiposSolicitudFromBackend] Total tipos (incluyendo inactivos):', tiposSolicitud.value.length)
-        console.log('📊 [loadTiposSolicitudFromBackend] Tipos activos:', tiposSolicitud.value.filter(t => t.activo).length)
-        console.log('📊 [loadTiposSolicitudFromBackend] Tipos inactivos:', tiposSolicitud.value.filter(t => !t.activo).length)
+        console.log(
+          '✅ [loadTiposSolicitudFromBackend] tiposSolicitud después del map:',
+          tiposSolicitud.value,
+        )
+        console.log(
+          '📊 [loadTiposSolicitudFromBackend] Total tipos (incluyendo inactivos):',
+          tiposSolicitud.value.length,
+        )
+        console.log(
+          '📊 [loadTiposSolicitudFromBackend] Tipos activos:',
+          tiposSolicitud.value.filter((t) => t.activo).length,
+        )
+        console.log(
+          '📊 [loadTiposSolicitudFromBackend] Tipos inactivos:',
+          tiposSolicitud.value.filter((t) => !t.activo).length,
+        )
       }
     } catch (error) {
       console.error('Error cargando tipos de solicitud desde backend:', error)
@@ -347,9 +364,9 @@ export const useConfigStore = defineStore('config', () => {
   function getIconForTipo(descripcion) {
     const iconMap = {
       'Nuevo Personal': 'person_add',
-      'Reemplazo': 'swap_horiz',
-      'Transferencia': 'transfer_within_a_station',
-      'Promoción': 'trending_up'
+      Reemplazo: 'swap_horiz',
+      Transferencia: 'transfer_within_a_station',
+      Promoción: 'trending_up',
     }
     return iconMap[descripcion] || 'assignment'
   }
@@ -360,9 +377,9 @@ export const useConfigStore = defineStore('config', () => {
   function getColorForTipo(descripcion) {
     const colorMap = {
       'Nuevo Personal': '#1976d2',
-      'Reemplazo': '#388e3c',
-      'Transferencia': '#f57c00',
-      'Promoción': '#9c27b0'
+      Reemplazo: '#388e3c',
+      Transferencia: '#f57c00',
+      Promoción: '#9c27b0',
     }
     return colorMap[descripcion] || '#607d8b'
   }
@@ -375,7 +392,7 @@ export const useConfigStore = defineStore('config', () => {
     try {
       const tipoDto = {
         codigo: tipoData.nombre.toUpperCase().replace(/\s+/g, '_'),
-        descripcion: tipoData.nombre
+        descripcion: tipoData.nombre,
       }
       const response = await configService.createTipoSolicitud(tipoDto)
 
@@ -388,7 +405,7 @@ export const useConfigStore = defineStore('config', () => {
         icon: tipoData.icon || 'assignment',
         color: tipoData.color || '#000000',
         activo: true,
-        backendId: response.data.idTipoSolicitud
+        backendId: response.data.idTipoSolicitud,
       })
 
       return response.data
@@ -406,13 +423,21 @@ export const useConfigStore = defineStore('config', () => {
   async function updateTipoSolicitudBackend(tipoId, tipoData) {
     loading.value = true
     try {
-      const tipo = tiposSolicitud.value.find(t => t.id === tipoId || t.backendId === tipoId)
+      const tipo = tiposSolicitud.value.find((t) => t.id === tipoId || t.backendId === tipoId)
       const backendId = tipo?.backendId || tipoId
 
       const tipoDto = {
-        Codigo: tipoData.Codigo || tipoData.nombre?.toUpperCase().replace(/\s+/g, '_') || tipo?.nombre.toUpperCase().replace(/\s+/g, '_'),
+        Codigo:
+          tipoData.Codigo ||
+          tipoData.nombre?.toUpperCase().replace(/\s+/g, '_') ||
+          tipo?.nombre.toUpperCase().replace(/\s+/g, '_'),
         Descripcion: tipoData.Descripcion || tipoData.nombre || tipo?.nombre,
-        Activo: tipoData.Activo !== undefined ? tipoData.Activo : (tipo?.activo !== undefined ? tipo.activo : true)
+        Activo:
+          tipoData.Activo !== undefined
+            ? tipoData.Activo
+            : tipo?.activo !== undefined
+              ? tipo.activo
+              : true,
       }
 
       const response = await configService.updateTipoSolicitud(backendId, tipoDto)
@@ -435,7 +460,7 @@ export const useConfigStore = defineStore('config', () => {
   async function deleteTipoSolicitudBackend(tipoId) {
     loading.value = true
     try {
-      const tipo = tiposSolicitud.value.find(t => t.id === tipoId || t.backendId === tipoId)
+      const tipo = tiposSolicitud.value.find((t) => t.id === tipoId || t.backendId === tipoId)
       const backendId = tipo?.backendId || tipoId
 
       await configService.deleteTipoSolicitud(backendId)
@@ -464,7 +489,7 @@ export const useConfigStore = defineStore('config', () => {
     try {
       const response = await configService.getAllConfigSla()
       // Filtrar solo las configuraciones activas
-      configSlaList.value = response.data.filter(config => config.esActivo !== false)
+      configSlaList.value = response.data.filter((config) => config.esActivo !== false)
       return configSlaList.value
     } catch (error) {
       console.error('Error cargando configuraciones SLA desde backend:', error)
@@ -485,7 +510,7 @@ export const useConfigStore = defineStore('config', () => {
         Descripcion: configData.descripcion,
         IdTipoSolicitud: configData.idTipoSolicitud,
         DiasUmbral: configData.diasUmbral,
-        EsActivo: configData.esActivo !== undefined ? configData.esActivo : true
+        EsActivo: configData.esActivo !== undefined ? configData.esActivo : true,
       }
       await configService.createConfigSla(configDto)
 
@@ -510,7 +535,7 @@ export const useConfigStore = defineStore('config', () => {
         Descripcion: configData.descripcion,
         IdTipoSolicitud: configData.idTipoSolicitud,
         DiasUmbral: configData.diasUmbral,
-        EsActivo: configData.esActivo
+        EsActivo: configData.esActivo,
       }
       await configService.updateConfigSla(id, configDto)
 
@@ -562,7 +587,7 @@ export const useConfigStore = defineStore('config', () => {
       // Sincronizar con prioridades locales
       if (response.data && response.data.length > 0) {
         // Crear un nuevo array para forzar reactividad de Vue
-        const nuevasPrioridades = response.data.map(prioridad => {
+        const nuevasPrioridades = response.data.map((prioridad) => {
           // Usar la descripción del backend directamente (ej: "Crítica", "Alta", "Media", "Baja")
           // Esto asegura que coincida exactamente con los datos de las solicitudes
           const nombreCorto = prioridad.descripcion
@@ -577,17 +602,29 @@ export const useConfigStore = defineStore('config', () => {
             icon: prioridad.icon || 'label',
             color: prioridad.color || '#607d8b',
             activo: prioridad.activo !== undefined ? prioridad.activo : true,
-            backendId: prioridad.idPrioridad
+            backendId: prioridad.idPrioridad,
           }
         })
 
         // Reemplazar el array completo para asegurar reactividad
         prioridades.value = nuevasPrioridades
 
-        console.log('✅ [loadPrioridadesFromBackend] prioridades después del map:', prioridades.value)
-        console.log('📊 [loadPrioridadesFromBackend] Total prioridades (incluyendo inactivas):', prioridades.value.length)
-        console.log('📊 [loadPrioridadesFromBackend] Prioridades activas:', prioridades.value.filter(p => p.activo).length)
-        console.log('📊 [loadPrioridadesFromBackend] Prioridades inactivas:', prioridades.value.filter(p => !p.activo).length)
+        console.log(
+          '✅ [loadPrioridadesFromBackend] prioridades después del map:',
+          prioridades.value,
+        )
+        console.log(
+          '📊 [loadPrioridadesFromBackend] Total prioridades (incluyendo inactivas):',
+          prioridades.value.length,
+        )
+        console.log(
+          '📊 [loadPrioridadesFromBackend] Prioridades activas:',
+          prioridades.value.filter((p) => p.activo).length,
+        )
+        console.log(
+          '📊 [loadPrioridadesFromBackend] Prioridades inactivas:',
+          prioridades.value.filter((p) => !p.activo).length,
+        )
       }
     } catch (error) {
       console.error('Error cargando prioridades desde backend:', error)
@@ -609,7 +646,7 @@ export const useConfigStore = defineStore('config', () => {
         Nivel: prioridadData.nivel,
         SlaMultiplier: prioridadData.slaMultiplier,
         Icon: prioridadData.icon || 'label',
-        Color: prioridadData.color || '#607d8b'
+        Color: prioridadData.color || '#607d8b',
       }
       const response = await configService.createPrioridad(prioridadDto)
 
@@ -631,17 +668,27 @@ export const useConfigStore = defineStore('config', () => {
   async function updatePrioridadBackend(prioridadId, prioridadData) {
     loading.value = true
     try {
-      const prioridad = prioridades.value.find(p => p.id === prioridadId || p.backendId === prioridadId)
+      const prioridad = prioridades.value.find(
+        (p) => p.id === prioridadId || p.backendId === prioridadId,
+      )
       const backendId = prioridad?.backendId || prioridadId
 
       const prioridadDto = {
         Codigo: prioridadData.Codigo || prioridadData.codigo || prioridad?.codigo,
         Descripcion: prioridadData.Descripcion || prioridadData.nombre || prioridad?.descripcion,
         Nivel: prioridadData.Nivel !== undefined ? prioridadData.Nivel : prioridadData.nivel,
-        SlaMultiplier: prioridadData.SlaMultiplier !== undefined ? prioridadData.SlaMultiplier : prioridadData.slaMultiplier,
+        SlaMultiplier:
+          prioridadData.SlaMultiplier !== undefined
+            ? prioridadData.SlaMultiplier
+            : prioridadData.slaMultiplier,
         Icon: prioridadData.Icon || prioridadData.icon || prioridad?.icon || 'label',
         Color: prioridadData.Color || prioridadData.color || prioridad?.color || '#607d8b',
-        Activo: prioridadData.Activo !== undefined ? prioridadData.Activo : (prioridad?.activo !== undefined ? prioridad.activo : true)
+        Activo:
+          prioridadData.Activo !== undefined
+            ? prioridadData.Activo
+            : prioridad?.activo !== undefined
+              ? prioridad.activo
+              : true,
       }
 
       const response = await configService.updatePrioridad(backendId, prioridadDto)
@@ -664,7 +711,9 @@ export const useConfigStore = defineStore('config', () => {
   async function deletePrioridadBackend(prioridadId) {
     loading.value = true
     try {
-      const prioridad = prioridades.value.find(p => p.id === prioridadId || p.backendId === prioridadId)
+      const prioridad = prioridades.value.find(
+        (p) => p.id === prioridadId || p.backendId === prioridadId,
+      )
       const backendId = prioridad?.backendId || prioridadId
 
       await configService.deletePrioridad(backendId)
@@ -681,7 +730,8 @@ export const useConfigStore = defineStore('config', () => {
 
   return {
     // init
-    init,
+    // init
+    // init, // Undefined
 
     // estado
     bloques,
@@ -704,16 +754,16 @@ export const useConfigStore = defineStore('config', () => {
     estadosOptions,
 
     // fetchers
-    fetchBloquesTech,
-    fetchTiposSolicitud,
-    fetchEstados,
-    fetchAllConfig,
+    // fetchBloquesTech,    // Undefined
+    // fetchTiposSolicitud, // Undefined
+    // fetchEstados,        // Undefined
+    // fetchAllConfig,      // Undefined
 
     // alert API
-    fetchAlertsForUser,
-    fetchUnreadCount,
-    markAlertAsRead,
-    createAlert,
+    // fetchAlertsForUser, // Undefined
+    // fetchUnreadCount,   // Undefined
+    // markAlertAsRead,    // Undefined
+    // createAlert,        // Undefined
 
     // búsquedas y gestión
     getBloqueByNombre,

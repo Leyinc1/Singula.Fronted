@@ -289,12 +289,16 @@ const cumplimientoOptions = [
 ]
 
 const totalSolicitudes = computed(() => {
-  return filteredSlaData.value.length
+  return filteredSlaData.value?.length || 0
 })
 
 const chartDataByPriority = computed(() => {
+  // Proteger contra datos no cargados
+  if (!prioridadOptions.value || prioridadOptions.value.length === 0) return []
+  if (!filteredSlaData.value || filteredSlaData.value.length === 0) return []
+
   // Usar prioridades del backend (solo activas)
-  const priorities = prioridadOptions.value.map(p => p.value)
+  const priorities = prioridadOptions.value.map((p) => p.value)
   const priorityData = []
 
   priorities.forEach((prioridad) => {
@@ -331,7 +335,7 @@ onMounted(async () => {
   await Promise.all([
     configStore.loadPrioridadesFromBackend(),
     configStore.loadAreasFromBackend(),
-    configStore.loadTiposSolicitudFromBackend()
+    configStore.loadTiposSolicitudFromBackend(),
   ])
   slaStore.fetchSlaData()
 })
@@ -404,4 +408,3 @@ function refreshData() {
   }
 }
 </style>
-

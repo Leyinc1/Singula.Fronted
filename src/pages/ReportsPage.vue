@@ -235,7 +235,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useSlaStore } from 'src/stores/slaStore'
 import PdfExportButton from 'src/components/ui/PdfExportButton.vue'
@@ -251,13 +251,22 @@ const reportFilters = ref({
 
 const reportTitle = ref('Reporte de Cumplimiento SLA')
 
+// Inicializar datos al montar el componente
+onMounted(async () => {
+  // Cargar datos si no están cargados
+  if (!slaData.value || slaData.value.length === 0) {
+    await slaStore.fetchSlaData()
+  }
+})
+
 const rolesOptions = computed(() => {
-  const roles = [...new Set(slaData.value.map((item) => item.bloque_tech))]
+  if (!slaData.value || slaData.value.length === 0) return []
+  const roles = [...new Set(slaData.value.map((item) => item.bloque_tech).filter(Boolean))]
   return roles.map((role) => ({ label: role, value: role }))
 })
 
 const totalSolicitudes = computed(() => {
-  return slaData.value.length
+  return slaData.value?.length || 0
 })
 
 function applyFilters() {
