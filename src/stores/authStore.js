@@ -8,6 +8,12 @@ import * as authService from 'src/services/authService'
 
 export const useAuthStore = defineStore('auth', () => {
   // Estado reactivo
+  // Si en localStorage existe un token mock (generado por versiones antiguas), lo eliminamos
+  const storedToken = localStorage.getItem('token') || null
+  if (storedToken && storedToken.startsWith && storedToken.startsWith('mock-jwt-token-')) {
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+  }
   const token = ref(localStorage.getItem('token') || null)
   const user = ref(null)
   const loading = ref(false)

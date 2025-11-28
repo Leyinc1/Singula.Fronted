@@ -11,7 +11,7 @@
       <q-separator />
 
       <q-card-section>
-        <q-form @submit="onSubmit" @reset="onReset" class="q-gutter-md">
+        <q-form ref="formRef" @submit="onSubmit" @reset="onReset" class="q-gutter-md">
           <div class="row q-col-gutter-md">
             <!-- BLOQUE TECH -->
             <div class="col-12 col-md-6">
@@ -23,7 +23,6 @@
                 emit-value
                 map-options
                 bg-color="white"
-                :rules="[(val) => !!val || 'Campo requerido']"
               >
                 <template v-slot:prepend>
                   <q-icon name="work" color="black" />
@@ -50,7 +49,6 @@
                 :options="tipoSolicitudOptions"
                 label="Tipo de Solicitud *"
                 hint="Nuevo Personal o Reemplazo"
-                :rules="[(val) => !!val || 'Campo requerido']"
                 emit-value
                 map-options
                 bg-color="white"
@@ -69,7 +67,6 @@
                 :options="prioridadOptions"
                 label="Prioridad *"
                 hint="Nivel de prioridad de la solicitud"
-                :rules="[(val) => !!val || 'Campo requerido']"
                 emit-value
                 map-options
                 bg-color="white"
@@ -98,10 +95,6 @@
                 type="date"
                 label="Fecha Solicitud *"
                 hint="Fecha en que se realizó la solicitud"
-                :rules="[
-                  (val) => !!val || 'Campo requerido',
-                  (val) => validarFechaSolicitud(val) || 'Fecha no puede ser futura',
-                ]"
                 bg-color="white"
               >
                 <template v-slot:prepend>
@@ -118,10 +111,6 @@
                 type="date"
                 label="Fecha de Ingreso *"
                 hint="Fecha en que ingresó el personal"
-                :rules="[
-                  (val) => !!val || 'Campo requerido',
-                  (val) => validarFechaIngreso(val) || 'Debe ser posterior a fecha solicitud',
-                ]"
                 bg-color="white"
               >
                 <template v-slot:prepend>
@@ -285,6 +274,7 @@ onMounted(async () => {
 
 const emit = defineEmits(['entry-created'])
 
+const formRef = ref(null)
 const saving = ref(false)
 
 const formData = ref({
@@ -322,24 +312,14 @@ const cumpleSla2 = computed(() => {
   return diasTranscurridos.value < 20
 })
 
-function validarFechaSolicitud(fecha) {
-  if (!fecha) return true
-  const fechaSeleccionada = new Date(fecha)
-  const hoy = new Date()
-  return fechaSeleccionada <= hoy
-}
-
-function validarFechaIngreso(fecha) {
-  if (!fecha || !formData.value.fechaSolicitud) return true
-  const fechaIng = new Date(fecha)
-  const fechaSol = new Date(formData.value.fechaSolicitud)
-  return fechaIng >= fechaSol
-}
-
 async function onSubmit() {
   saving.value = true
 
   try {
+    // Guardar valores en variables temporales antes de resetear
+    const bloqueTechGuardado = formData.value.bloqueTech
+    const tipoSolicitudGuardado = formData.value.tipoSolicitud
+
     // Crear objeto de solicitud
     const solicitud = {
       bloque_tech: formData.value.bloqueTech,
@@ -359,15 +339,17 @@ async function onSubmit() {
     // Emitir evento al componente padre
     emit('entry-created', solicitud)
 
+    // Resetear formulario primero
+    onReset()
+
+    // Luego mostrar la notificación con los valores guardados
     $q.notify({
       type: 'positive',
       message: 'Solicitud guardada exitosamente',
+      caption: `${tipoSolicitudGuardado} - ${bloqueTechGuardado}`,
       icon: 'check_circle',
       position: 'top',
     })
-
-    // Resetear formulario
-    onReset()
   } catch (error) {
     console.error('Error al guardar solicitud:', error)
 
@@ -392,6 +374,11 @@ function onReset() {
     fechaIngreso: null,
     nombrePersonal: '',
     observaciones: '',
+  }
+
+  // Limpiar las validaciones del formulario
+  if (formRef.value) {
+    formRef.value.resetValidation()
   }
 }
 </script>

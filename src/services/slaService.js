@@ -4,6 +4,33 @@
  */
 import apiClient from './api'
 
+// ==================== DATOS MOCKEADOS ====================
+// Conservados de master porque createManualEntry los utiliza
+// TODO: Remover cuando la autenticación esté implementada
+const MOCK_AREAS = [
+  { idArea: 1, nombreArea: 'Backend', descripcion: 'Desarrollo Backend', activo: true },
+  { idArea: 2, nombreArea: 'Frontend', descripcion: 'Desarrollo Frontend', activo: true },
+  { idArea: 3, nombreArea: 'QA', descripcion: 'Quality Assurance', activo: true },
+  { idArea: 4, nombreArea: 'Mobile', descripcion: 'Desarrollo Móvil', activo: true },
+  { idArea: 5, nombreArea: 'DevOps', descripcion: 'DevOps e Infraestructura', activo: true },
+  { idArea: 6, nombreArea: 'Data', descripcion: 'Data Science', activo: true },
+]
+
+const MOCK_ROLES = [
+  { idRolRegistro: 1, bloqueTech: 'Backend', nombreRol: 'Desarrollador Backend' },
+  { idRolRegistro: 2, bloqueTech: 'Frontend', nombreRol: 'Desarrollador Frontend' },
+  { idRolRegistro: 3, bloqueTech: 'QA', nombreRol: 'QA Engineer' },
+  { idRolRegistro: 4, bloqueTech: 'Mobile', nombreRol: 'Desarrollador Mobile' },
+  { idRolRegistro: 5, bloqueTech: 'DevOps', nombreRol: 'DevOps Engineer' },
+  { idRolRegistro: 6, bloqueTech: 'Data', nombreRol: 'Data Scientist' },
+]
+
+const MOCK_SLAS = [
+  { idSla: 1, codigoSla: 'SLA-NUEVO-001', descripcion: 'SLA Nuevo Personal', diasMaximo: 30 },
+  { idSla: 2, codigoSla: 'SLA-REEMPLAZO-001', descripcion: 'SLA Reemplazo', diasMaximo: 15 },
+]
+// ==================== FIN DATOS MOCKEADOS ====================
+
 export const slaService = {
   /**
    * Obtener datos SLA con filtros opcionales
@@ -14,18 +41,27 @@ export const slaService = {
     try {
       const params = {}
 
+      // Lógica de feat/Reportes: camelCase y manejo específico de filtros
       if (filters.startDate) params.startDate = filters.startDate
       if (filters.endDate) params.endDate = filters.endDate
-      if (filters.bloqueTech) params.bloqueTech = filters.bloqueTech
+
+      // NOTA: area se filtra localmente en el store (no se envía al backend) para permitir selección múltiple
+      // if (filters.area) params.area = filters.area
+
       if (filters.tipoSolicitud) params.tipoSolicitud = filters.tipoSolicitud
       if (filters.prioridad) params.prioridad = filters.prioridad
-      if (filters.cumpleSla !== undefined) params.cumpleSla = filters.cumpleSla
+
+      if (typeof filters.cumpleSla !== 'undefined' && filters.cumpleSla !== null) {
+        // Conversión explícita para el backend: 'cumple' => true, 'no_cumple' => false
+        if (filters.cumpleSla === 'cumple') params.cumpleSla = true
+        else if (filters.cumpleSla === 'no_cumple') params.cumpleSla = false
+      }
 
       const response = await apiClient.get('/dashboard/sla/data', { params })
       return response.data
     } catch (error) {
-      console.error('Error al obtener datos SLA:', error)
-      throw error
+      console.error('Error al obtener datos SLA del servidor:', error)
+      throw new Error(`No se pudieron cargar los datos de la base de datos: ${error.message}. Por favor, verifica que el servidor está en ejecución.`)
     }
   },
 
@@ -39,7 +75,7 @@ export const slaService = {
       const formData = new FormData()
       formData.append('file', file)
 
-      const response = await apiClient.post('/api/sla/upload', formData, {
+      const response = await apiClient.post('/sla/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -54,117 +90,68 @@ export const slaService = {
 
   /**
    * Crear solicitud manual de SLA
-   * @param {Object} solicitud - Datos de la solicitud
+   * @param {Object} solicitud - Datos de la solicitud (formato frontend)
    * @returns {Promise} - Promesa con la respuesta del servidor
    */
   async createManualEntry(solicitud) {
     try {
-      const response = await apiClient.post('/api/sla/manual', solicitud)
+      // TODO: Cuando la autenticación esté lista, descomentar las llamadas a la API
+      // Por ahora usamos datos mock directamente para evitar 401
+      const areas = MOCK_AREAS
+      const roles = MOCK_ROLES
+      const slas = MOCK_SLAS
+
+      console.log('Usando datos MOCK - Areas:', areas)
+      console.log('Usando datos MOCK - Roles:', roles)
+      console.log('Usando datos MOCK - SLAs:', slas)
+      console.log('Solicitud frontend:', solicitud)
+
+      // Buscar el área por nombre (bloque_tech) - manejar diferentes variaciones
+      const bloqueTechLower = (solicitud.bloque_tech || '').toLowerCase()
+      const area = areas.find((a) => {
+        const nombreArea = (a.nombreArea || a.NombreArea || a.nombre_area || '').toLowerCase()
+        return nombreArea === bloqueTechLower
+      })
+
+      // Buscar el rol por bloque_tech
+      const rol = roles.find((r) => {
+        const bloqueTech = (r.bloqueTech || r.BloqueTech || r.bloque_tech || '').toLowerCase()
+        return bloqueTech === bloqueTechLower
+      })
+
+      // Buscar el SLA por tipo de solicitud
+      const tipoSolicitudLower = (solicitud.tipo_solicitud || '').toLowerCase()
+      const sla = slas.find((s) => {
+        const codigo = (s.codigoSla || s.CodigoSla || s.codigo_sla || '').toLowerCase()
+        if (tipoSolicitudLower.includes('nuevo') && codigo.includes('nuevo')) return true
+        if (tipoSolicitudLower.includes('reemplazo') && codigo.includes('reemplazo')) return true
+        return false
+      })
+
+      console.log('Lookup - Area:', area, 'Rol:', rol, 'SLA:', sla)
+
+      // Construir DTO para el backend
+      const backendDto = {
+        IdPersonal: 1, // Personal genérico por ahora
+        IdRolRegistro: rol?.idRolRegistro || rol?.IdRolRegistro || 1,
+        IdSla: sla?.idSla || sla?.IdSla || 1,
+        IdArea: area?.idArea || area?.IdArea || 1,
+        IdEstadoSolicitud: 1, // Pendiente
+        FechaSolicitud: solicitud.fecha_solicitud,
+        FechaIngreso: solicitud.fecha_ingreso,
+        NumDiasSla: solicitud.dias_transcurridos,
+        ResumenSla:
+          solicitud.observaciones || `${solicitud.tipo_solicitud} - ${solicitud.bloque_tech}`,
+        OrigenDato: 'manual',
+        Prioridad: solicitud.prioridad,
+      }
+
+      console.log('DTO a enviar:', backendDto)
+
+      const response = await apiClient.post('/solicitud', backendDto)
       return response.data
     } catch (error) {
       console.error('Error al crear solicitud manual:', error)
-      throw error
-    }
-  },
-
-  /**
-   * Obtener predicción de cumplimiento SLA (Calculado en cliente)
-   * @returns {Promise} - Promesa con datos de predicción
-   */
-  async getPrediction() {
-    try {
-      // 1. Obtener datos históricos (últimos 6 meses)
-      const endDate = new Date()
-      const startDate = new Date()
-      startDate.setMonth(startDate.getMonth() - 6)
-
-      const response = await this.getSlaData({
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
-      })
-
-      const data = response.data || []
-
-      if (data.length === 0) {
-        return {
-          sla1_prediction: 0,
-          sla2_prediction: 0,
-          trend: 'neutral',
-          confidence: 0,
-          history: [],
-        }
-      }
-
-      // 2. Calcular cumplimiento mensual
-      const monthlyStats = {}
-
-      data.forEach((item) => {
-        const date = new Date(item.fechaSolicitud)
-        const monthKey = `${date.getFullYear()}-${date.getMonth() + 1}`
-
-        if (!monthlyStats[monthKey]) {
-          monthlyStats[monthKey] = {
-            total: 0,
-            sla1_ok: 0,
-            sla2_ok: 0,
-          }
-        }
-
-        monthlyStats[monthKey].total++
-        if (item.cumpleSla1) monthlyStats[monthKey].sla1_ok++
-        if (item.cumpleSla2) monthlyStats[monthKey].sla2_ok++
-      })
-
-      // 3. Preparar datos para regresión
-      const months = Object.keys(monthlyStats).sort()
-      const x = months.map((_, i) => i) // 0, 1, 2...
-      const y1 = months.map((m) => (monthlyStats[m].sla1_ok / monthlyStats[m].total) * 100)
-      const y2 = months.map((m) => (monthlyStats[m].sla2_ok / monthlyStats[m].total) * 100)
-
-      // 4. Regresión Lineal Simple
-      const predictNext = (xValues, yValues) => {
-        const n = xValues.length
-        if (n < 2) return yValues[n - 1] || 0
-
-        const sumX = xValues.reduce((a, b) => a + b, 0)
-        const sumY = yValues.reduce((a, b) => a + b, 0)
-        const sumXY = xValues.reduce((a, b, i) => a + b * yValues[i], 0)
-        const sumXX = xValues.reduce((a, b) => a + b * b, 0)
-
-        const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX)
-        const intercept = (sumY - slope * sumX) / n
-
-        return slope * n + intercept // Predicción para el siguiente mes (x = n)
-      }
-
-      const predSla1 = predictNext(x, y1)
-      const predSla2 = predictNext(x, y2)
-
-      // Calcular tendencia general (pendiente de SLA1)
-      const n = x.length
-      const sumX = x.reduce((a, b) => a + b, 0)
-      const sumY = y1.reduce((a, b) => a + b, 0)
-      const sumXY = x.reduce((a, b, i) => a + b * y1[i], 0)
-      const sumXX = x.reduce((a, b) => a + b * b, 0)
-      const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX)
-
-      let trend = 'estable'
-      if (slope > 1) trend = 'mejorando'
-      if (slope < -1) trend = 'empeorando'
-
-      return {
-        sla1_prediction: Math.min(100, Math.max(0, predSla1)),
-        sla2_prediction: Math.min(100, Math.max(0, predSla2)),
-        trend: trend,
-        confidence: Math.min(0.95, 0.5 + data.length / 200), // Confianza basada en volumen de datos
-        history: months.map((m, i) => ({
-          month: m,
-          sla1: y1[i],
-          sla2: y2[i],
-        })),
-      }
-    } catch (error) {
-      console.error('Error al obtener predicción:', error)
       throw error
     }
   },
@@ -180,6 +167,44 @@ export const slaService = {
     } catch (error) {
       console.error('Error al obtener estadísticas:', error)
       throw error
+    }
+  },
+
+  /**
+   * Obtener filtros disponibles dinámicamente
+   * @returns {Promise} - Promesa con filtros disponibles
+   */
+  async getAvailableFilters() {
+    try {
+      const response = await apiClient.get('/dashboard/filters')
+      return response.data
+    } catch (error) {
+      console.error('Error al obtener filtros disponibles:', error)
+      throw error
+    }
+  },
+
+  /**
+   * Obtener datos de dashboard específicos para reportes
+   * Filtra por fecha de INGRESO y permite múltiples bloques tech (filtrado en frontend)
+   * @param {Object} filters - Filtros para reportes (startDate, endDate, tipoSolicitud)
+   * @returns {Promise} - Promesa con los datos SLA
+   */
+  async getDashboardDataForReports(filters = {}) {
+    try {
+      const params = {}
+
+      // Enviar fechas y tipo de solicitud al backend
+      if (filters.startDate) params.startDate = filters.startDate
+      if (filters.endDate) params.endDate = filters.endDate
+      if (filters.tipoSolicitud) params.tipoSolicitud = filters.tipoSolicitud
+
+      // NO enviar bloqueTech - se filtra en frontend para permitir múltiples selecciones
+      const response = await apiClient.get('/Reporte/dashboard-data', { params })
+      return response.data
+    } catch (error) {
+      console.error('Error al obtener datos de dashboard para reportes:', error)
+      throw new Error(`No se pudieron cargar los datos: ${error.message}`)
     }
   },
 }
