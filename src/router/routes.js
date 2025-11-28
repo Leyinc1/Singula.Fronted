@@ -48,6 +48,7 @@ const routes = [
         path: 'notification-email',
         name: 'notification-email',
         component: () => import('pages/NotificacionEmailPage.vue'),
+        // Sin restricción de admin - todos pueden configurar sus emails
       },
       {
         path: 'profile',
@@ -58,13 +59,11 @@ const routes = [
         path: 'users',
         name: 'users',
         component: () => import('pages/UsersPage.vue'),
-        meta: { requiresAdmin: true }, // Solo para administradores
       },
       {
         path: 'config',
         name: 'config',
         component: () => import('pages/ConfigPage.vue'),
-        meta: { requiresAdmin: true }, // Solo para administradores
       },
     ],
   },
