@@ -1,12 +1,15 @@
-/**
- * Store de Pinia para gestionar la configuración del sistema
- * Maneja: bloques tecnológicos, prioridades, tipos de solicitud, etc.
- * Este store centraliza toda la configuración escalable del sistema
- */
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { configService } from 'src/services/configService'
 
+/**
+ * Store de configuración y utilidades relacionadas con alertas.
+ * - Gestiona: bloques tech (desde backend), prioridades (local), tipos de solicitud y estados (desde backend).
+ * - Expone métodos para consultar y operar alertas en el backend.
+ *
+ * Nota: la gestión del token se hace en otra rama. Aquí se acepta un tokenProvider opcional.
+ * Para Vite use VITE_API_BASE_URL en .env; si no existe, pasar baseUrl al init.
+ */
 export const useConfigStore = defineStore('config', () => {
   // ============================================
   // CONFIGURACIÓN DE BLOQUES TECNOLÓGICOS
@@ -21,44 +24,37 @@ export const useConfigStore = defineStore('config', () => {
   const prioridades = ref([])
 
   // ============================================
-  // CONFIGURACIÓN DE TIPOS DE SOLICITUD
+  // FETCHERS (backend)
   // ============================================
   // Los tipos de solicitud se cargan desde el backend
   const tiposSolicitud = ref([])
 
   // ============================================
-  // CONFIGURACIÓN DE ESTADOS
+  // ALERT API (endpoints para Android/Frontend)
   // ============================================
   // Los estados se obtienen desde el backend (datos reales)
   const estados = ref([])
 
   // ============================================
-  // COMPUTADOS
+  // COMPUTED y UTILIDADES
   // ============================================
-
-  // Departamentos únicos
   const departamentos = computed(() => {
-    const deps = [...new Set(bloques.value.map((b) => b.departamento))]
+    const deps = [...new Set(bloques.value.map((b) => b.departamento || 'General'))]
     return deps.sort()
   })
 
-  // Bloques activos
   const bloquesActivos = computed(() => bloques.value.filter((b) => b.activo))
 
-  // Bloques por departamento
   const bloquesPorDepartamento = computed(() => {
     const grouped = {}
     bloquesActivos.value.forEach((bloque) => {
-      const dep = bloque.departamento
-      if (!grouped[dep]) {
-        grouped[dep] = []
-      }
+      const dep = bloque.departamento || 'General'
+      if (!grouped[dep]) grouped[dep] = []
       grouped[dep].push(bloque)
     })
     return grouped
   })
 
-  // Opciones para selects
   const bloquesOptions = computed(() =>
     bloquesActivos.value.map((b) => ({
       label: b.nombre,
@@ -66,6 +62,7 @@ export const useConfigStore = defineStore('config', () => {
       icon: b.icon,
       color: b.color,
       departamento: b.departamento,
+      id: b.id,
     })),
   )
 
@@ -100,9 +97,8 @@ export const useConfigStore = defineStore('config', () => {
   )
 
   // ============================================
-  // MÉTODOS DE BÚSQUEDA
+  // Búsquedas y utilidades
   // ============================================
-
   function getBloqueByNombre(nombre) {
     return bloques.value.find((b) => b.nombre === nombre)
   }
@@ -119,13 +115,10 @@ export const useConfigStore = defineStore('config', () => {
     return estados.value.find((e) => e.id === id)
   }
 
-  // ============================================
-  // MÉTODOS DE GESTIÓN (para futuro panel admin)
-  // ============================================
-
+  // Gestión de arrays en runtime (UI / admin)
   function agregarBloque(bloque) {
     bloques.value.push({
-      id: bloque.id || bloque.nombre.toLowerCase().replace(/\s+/g, '_'),
+      id: bloque.id || (bloque.nombre || '').toLowerCase().replace(/\s+/g, '_'),
       ...bloque,
       activo: true,
     })
@@ -133,44 +126,33 @@ export const useConfigStore = defineStore('config', () => {
 
   function actualizarBloque(id, datos) {
     const index = bloques.value.findIndex((b) => b.id === id)
-    if (index !== -1) {
-      bloques.value[index] = { ...bloques.value[index], ...datos }
-    }
+    if (index !== -1) bloques.value[index] = { ...bloques.value[index], ...datos }
   }
 
   function toggleBloqueActivo(id) {
     const bloque = bloques.value.find((b) => b.id === id)
-    if (bloque) {
-      bloque.activo = !bloque.activo
-    }
+    if (bloque) bloque.activo = !bloque.activo
   }
 
   function agregarPrioridad(prioridad) {
     prioridades.value.push(prioridad)
-    // Ordenar por nivel
     prioridades.value.sort((a, b) => b.nivel - a.nivel)
   }
 
   function agregarTipoSolicitud(tipo) {
     tiposSolicitud.value.push({
-      id: tipo.id || tipo.nombre.toLowerCase().replace(/\s+/g, '_'),
+      id: tipo.id || (tipo.nombre || '').toLowerCase().replace(/\s+/g, '_'),
       ...tipo,
     })
   }
 
-  // ============================================
   // CONFIGURACIÓN DE SLA
-  // ============================================
-
   function calcularSLA(tipoSolicitud, prioridad) {
     const tipo = getTipoSolicitudByNombre(tipoSolicitud)
     const prio = getPrioridadByNombre(prioridad)
-
     if (!tipo) return null
-
-    const slaBase = tipo.sla
-    const multiplier = prio?.slaMultiplier || 1.0
-
+    const slaBase = tipo.sla ?? 0
+    const multiplier = prio?.slaMultiplier ?? 1.0
     return Math.round(slaBase * multiplier)
   }
 
@@ -698,7 +680,10 @@ export const useConfigStore = defineStore('config', () => {
   }
 
   return {
-    // Estado
+    // init
+    init,
+
+    // estado
     bloques,
     prioridades,
     tiposSolicitud,
@@ -709,7 +694,7 @@ export const useConfigStore = defineStore('config', () => {
     configSlaList,
     prioridadesBackend,
 
-    // Computados
+    // computed
     departamentos,
     bloquesActivos,
     bloquesPorDepartamento,
@@ -718,13 +703,23 @@ export const useConfigStore = defineStore('config', () => {
     tiposSolicitudOptions,
     estadosOptions,
 
-    // Métodos de búsqueda
+    // fetchers
+    fetchBloquesTech,
+    fetchTiposSolicitud,
+    fetchEstados,
+    fetchAllConfig,
+
+    // alert API
+    fetchAlertsForUser,
+    fetchUnreadCount,
+    markAlertAsRead,
+    createAlert,
+
+    // búsquedas y gestión
     getBloqueByNombre,
     getPrioridadByNombre,
     getTipoSolicitudByNombre,
     getEstadoById,
-
-    // Métodos de gestión
     agregarBloque,
     actualizarBloque,
     toggleBloqueActivo,
