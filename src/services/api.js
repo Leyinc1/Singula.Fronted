@@ -4,10 +4,15 @@ import { useAuthStore } from 'src/stores/authStore'
 // URL base del backend - ajustar según el entorno
 const API_BASE_URL = process.env.VUE_APP_API_URL || 'http://localhost:5000/api'
 
+// ========== MODO DESARROLLO ==========
+const DEV_MODE = true // Cambiar a false para producción
+// =====================================
+
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000,
-  withCredentials: true,
+  // withCredentials: false para evitar conflictos CORS con AllowAnyOrigin
+  withCredentials: false,
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
@@ -37,14 +42,20 @@ apiClient.interceptors.response.use(
     if (error.response) {
       const status = error.response.status
       if (status === 401) {
-        try {
-          const authStore = useAuthStore()
-          if (authStore?.logout) authStore.logout()
-        } catch (err) {
-          console.warn('Auth store logout failed', err)
+        // En modo desarrollo, solo loguear el 401 sin hacer logout automático
+        if (DEV_MODE) {
+          console.warn('⚠️ [DEV MODE] 401 Unauthorized - endpoint:', error.config?.url)
+          // No hacer logout ni redirigir en modo dev
+        } else {
+          try {
+            const authStore = useAuthStore()
+            if (authStore?.logout) authStore.logout()
+          } catch (err) {
+            console.warn('Auth store logout failed', err)
+          }
+          // redirect to login
+          window.location.href = '/#/login'
         }
-        // redirect to login
-        window.location.href = '/#/login'
       }
     } else if (error.request) {
       console.error('No se recibió respuesta del servidor')

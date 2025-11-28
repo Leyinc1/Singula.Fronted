@@ -7,6 +7,22 @@ import { ref, computed } from 'vue'
 import apiClient from 'src/services/api'
 import { useSlaStore } from './slaStore'
 
+// ========== MODO DESARROLLO - MOCK ==========
+const DEV_MODE = true // Cambiar a false para usar autenticación real
+
+const MOCK_USER = {
+  id: 1,
+  name: 'Administrador',
+  email: 'admin@singula.com',
+  role: 'Admin',
+  username: 'admin',
+}
+
+// Token JWT mock válido (estructura real pero datos ficticios)
+const MOCK_TOKEN =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwibmFtZSI6IkFkbWluaXN0cmFkb3IiLCJlbWFpbCI6ImFkbWluQHNpbmd1bGEuY29tIiwicm9sZSI6IkFkbWluIiwiZXhwIjoxNzY0NTAwMDAwfQ.mock_signature_for_dev'
+// =============================================
+
 export const useAuthStore = defineStore('auth', () => {
   // Estado reactivo
   // Si en localStorage existe un token mock (generado por versiones antiguas), lo eliminamos
@@ -35,6 +51,21 @@ export const useAuthStore = defineStore('auth', () => {
 
   // Acciones
   async function login(credentials) {
+    // ========== MODO DESARROLLO - MOCK LOGIN ==========
+    if (DEV_MODE) {
+      console.log('🔓 [DEV MODE] Login mock activado')
+      // Simular delay de red
+      await new Promise((resolve) => setTimeout(resolve, 500))
+
+      // Aceptar cualquier credencial en modo dev
+      setToken(MOCK_TOKEN)
+      setUser(MOCK_USER)
+
+      console.log('✅ [DEV MODE] Usuario autenticado:', MOCK_USER.name)
+      return { token: MOCK_TOKEN, user: MOCK_USER }
+    }
+    // ==================================================
+
     // credentials: { username, password, rememberMe }
     const payload = {
       Username: credentials.username,
@@ -56,23 +87,23 @@ export const useAuthStore = defineStore('auth', () => {
         if (parts.length === 3) {
           const payloadJson = atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'))
           const claims = JSON.parse(payloadJson)
-          
+
           console.log('JWT Claims decodificados:', claims)
-          
+
           // Intentar extraer ID de múltiples posibles ubicaciones
           const possibleIds = [
             claims.UserId,
-            claims.userId, 
+            claims.userId,
             claims.sub,
             claims.User_Id,
-            claims['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier']
+            claims['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'],
           ]
-          
-          const extractedId = possibleIds.find(id => id != null && id !== undefined)
+
+          const extractedId = possibleIds.find((id) => id != null && id !== undefined)
           const parsedId = extractedId ? parseInt(extractedId, 10) : null
-          
+
           console.log('ID extraído del JWT:', parsedId)
-          
+
           parsedUser = {
             id: parsedId,
             name:
@@ -84,7 +115,10 @@ export const useAuthStore = defineStore('auth', () => {
               claims.email ||
               claims['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] ||
               null,
-            role: claims.role || claims['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || null,
+            role:
+              claims.role ||
+              claims['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] ||
+              null,
           }
         }
       } catch (err) {
@@ -123,7 +157,7 @@ export const useAuthStore = defineStore('auth', () => {
     // Limpiar localStorage
     localStorage.removeItem('token')
     localStorage.removeItem('user')
-    
+
     // Resetear estado de reportes al cerrar sesión
     const slaStore = useSlaStore()
     slaStore.resetReportsInitialization()
