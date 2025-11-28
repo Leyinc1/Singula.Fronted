@@ -727,28 +727,39 @@ async function guardarBloque() {
   if (!nuevoBloque.value.nombre) return
 
   try {
+    const nombreGuardado = nuevoBloque.value.nombre
+
     if (modoEdicion.value && bloqueEnEdicion.value) {
       // Editar bloque existente en backend
       await configStore.updateAreaBackend(bloqueEnEdicion.value, nuevoBloque.value)
+
+      // Cerrar el diálogo primero
+      cerrarDialogBloque()
+
+      // Luego mostrar la notificación
       $q.notify({
         type: 'positive',
         message: 'Bloque actualizado exitosamente',
-        caption: nuevoBloque.value.nombre,
+        caption: nombreGuardado,
         position: 'top',
         icon: 'check_circle',
       })
     } else {
       // Agregar nuevo bloque al backend
       await configStore.createAreaBackend(nuevoBloque.value)
+
+      // Cerrar el diálogo primero
+      cerrarDialogBloque()
+
+      // Luego mostrar la notificación
       $q.notify({
         type: 'positive',
         message: 'Bloque agregado exitosamente',
-        caption: nuevoBloque.value.nombre,
+        caption: nombreGuardado,
         position: 'top',
         icon: 'check_circle',
       })
     }
-    cerrarDialogBloque()
   } catch (error) {
     $q.notify({
       type: 'negative',
@@ -952,10 +963,14 @@ async function guardarPrioridad() {
 
       await configStore.updatePrioridadBackend(prioridadEnEdicion.value, prioridadDto)
 
+      // Cerrar el diálogo primero
+      cerrarDialogPrioridad()
+
+      // Luego mostrar la notificación
       $q.notify({
         type: 'positive',
         message: 'Prioridad actualizada exitosamente',
-        caption: nuevaPrioridad.value.nombre,
+        caption: nuevaPrioridad.value.codigo || nuevaPrioridad.value.nombre,
         position: 'top',
         icon: 'check_circle',
       })
@@ -971,18 +986,22 @@ async function guardarPrioridad() {
         color: nuevaPrioridad.value.color || '#607d8b',
       }
 
+      const nombreGuardado = nuevaPrioridad.value.nombre
+
       await configStore.createPrioridadBackend(prioridadDto)
 
+      // Cerrar el diálogo primero
+      cerrarDialogPrioridad()
+
+      // Luego mostrar la notificación
       $q.notify({
         type: 'positive',
         message: 'Prioridad agregada exitosamente',
-        caption: nuevaPrioridad.value.nombre,
+        caption: nombreGuardado,
         position: 'top',
         icon: 'check_circle',
       })
     }
-
-    cerrarDialogPrioridad()
   } catch (error) {
     $q.notify({
       type: 'negative',
@@ -1130,28 +1149,39 @@ async function guardarTipoSolicitud() {
   if (!nuevoTipo.value.nombre || !nuevoTipo.value.sla) return
 
   try {
+    const nombreGuardado = nuevoTipo.value.nombre
+
     if (modoEdicionTipo.value && tipoEnEdicion.value) {
       // Editar tipo existente en backend
       await configStore.updateTipoSolicitudBackend(tipoEnEdicion.value, nuevoTipo.value)
+
+      // Cerrar el diálogo primero
+      cerrarDialogTipo()
+
+      // Luego mostrar la notificación
       $q.notify({
         type: 'positive',
         message: 'Tipo de solicitud actualizado exitosamente',
-        caption: nuevoTipo.value.nombre,
+        caption: nombreGuardado,
         position: 'top',
         icon: 'check_circle',
       })
     } else {
       // Agregar nuevo tipo al backend
       await configStore.createTipoSolicitudBackend(nuevoTipo.value)
+
+      // Cerrar el diálogo primero
+      cerrarDialogTipo()
+
+      // Luego mostrar la notificación
       $q.notify({
         type: 'positive',
         message: 'Tipo de solicitud agregado exitosamente',
-        caption: nuevoTipo.value.nombre,
+        caption: nombreGuardado,
         position: 'top',
         icon: 'check_circle',
       })
     }
-    cerrarDialogTipo()
   } catch (error) {
     $q.notify({
       type: 'negative',

@@ -44,13 +44,13 @@ export const slaService = {
       // Lógica de feat/Reportes: camelCase y manejo específico de filtros
       if (filters.startDate) params.startDate = filters.startDate
       if (filters.endDate) params.endDate = filters.endDate
-      
-      // NOTA: bloqueTech se filtra localmente en el store (no se envía al backend) para permitir selección múltiple
-      // if (filters.bloqueTech) params.bloqueTech = filters.bloqueTech
-      
+
+      // NOTA: area se filtra localmente en el store (no se envía al backend) para permitir selección múltiple
+      // if (filters.area) params.area = filters.area
+
       if (filters.tipoSolicitud) params.tipoSolicitud = filters.tipoSolicitud
       if (filters.prioridad) params.prioridad = filters.prioridad
-      
+
       if (typeof filters.cumpleSla !== 'undefined' && filters.cumpleSla !== null) {
         // Conversión explícita para el backend: 'cumple' => true, 'no_cumple' => false
         if (filters.cumpleSla === 'cumple') params.cumpleSla = true

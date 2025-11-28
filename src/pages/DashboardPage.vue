@@ -63,7 +63,7 @@
 
             <div class="col-12 col-sm-6 col-md-4 col-lg-3">
               <q-select
-                v-model="localFilters.bloqueTech"
+                v-model="localFilters.area"
                 filled
                 label="ÁREAS"
                 :options="bloquesOptions"
@@ -269,7 +269,7 @@ const { loading, kpisPorTipo, kpiEficacia, chartDataByRole } = storeToRefs(slaSt
 const localFilters = ref({
   startDate: null,
   endDate: null,
-  bloqueTech: [],
+  area: [],
   tipoSolicitud: [],
   prioridad: [],
   cumpleSla: null,
@@ -344,7 +344,7 @@ function applyFilters() {
   slaStore.setFilters({
     startDate: localFilters.value.startDate,
     endDate: localFilters.value.endDate,
-    bloqueTech: localFilters.value.bloqueTech,
+    area: localFilters.value.area,
     tipoSolicitud: localFilters.value.tipoSolicitud,
     prioridad: localFilters.value.prioridad,
     cumpleSla: localFilters.value.cumpleSla,
@@ -355,7 +355,7 @@ function resetFilters() {
   localFilters.value = {
     startDate: null,
     endDate: null,
-    bloqueTech: [],
+    area: [],
     tipoSolicitud: [],
     prioridad: [],
     cumpleSla: null,

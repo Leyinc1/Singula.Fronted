@@ -13,10 +13,10 @@ export const useSlaStore = defineStore('sla', () => {
   const allData = ref([]) // Guardamos todos los datos sin filtrar
   const loading = ref(false)
   const error = ref(null)
-  
+
   // Flag para saber si la página de reportes ya fue inicializada
   const isReportsInitialized = ref(false)
-  
+
   // Estado de filtros aplicados en la página de reportes
   const appliedReportFilters = ref({
     selectedSlaType: null,
@@ -30,7 +30,7 @@ export const useSlaStore = defineStore('sla', () => {
   const filters = ref({
     startDate: null,
     endDate: null,
-    bloqueTech: [], // Array para selección múltiple
+    area: [], // Array para selección múltiple
     tipoSolicitud: [], // Array para selección múltiple
     prioridad: [], // Array para selección múltiple
     cumpleSla: null,
@@ -59,18 +59,18 @@ export const useSlaStore = defineStore('sla', () => {
       })
     }
 
-    // 3. Filtro Bloque Tech (Local)
-    if (filters.value.bloqueTech && filters.value.bloqueTech.length > 0) {
+    // 3. Filtro Area (Local)
+    if (filters.value.area && filters.value.area.length > 0) {
       // Manejar tanto array como string simple
-      const filterVal = filters.value.bloqueTech
+      const filterVal = filters.value.area
       if (Array.isArray(filterVal)) {
         // Si no está vacío y no incluye TODOS (aunque TODOS suele limpiarse antes)
         if (filterVal.length > 0 && !filterVal.includes('TODOS')) {
-          data = data.filter((record) => filterVal.includes(record.bloque_tech || record.bloqueTech))
+          data = data.filter((record) => filterVal.includes(record.area || record.Area))
         }
       } else {
         // String simple
-        data = data.filter((record) => (record.bloque_tech || record.bloqueTech) === filterVal)
+        data = data.filter((record) => (record.area || record.Area) === filterVal)
       }
     }
 
@@ -97,7 +97,7 @@ export const useSlaStore = defineStore('sla', () => {
           cumpleVal = record[cumpleField] === true
         } else {
           // Lógica Legacy (Master fallback)
-          cumpleVal = 
+          cumpleVal =
             ((record.tipo_solicitud === 'Nuevo Personal' || record.tipoSolicitud === 'Nuevo Personal') && (record.cumple_sla1 || record.cumpleSla1)) ||
             ((record.tipo_solicitud === 'Reemplazo' || record.tipoSolicitud === 'Reemplazo') && (record.cumple_sla2 || record.cumpleSla2))
         }
@@ -123,7 +123,7 @@ export const useSlaStore = defineStore('sla', () => {
   const kpiBySla = computed(() => {
     const result = {}
     const data = filteredData.value || []
-    
+
     slaTypes.value.forEach((tipo) => {
       const records = data.filter((r) => (r.tipo_solicitud || r.tipoSolicitud) === tipo)
       if (records.length === 0) {
@@ -134,12 +134,12 @@ export const useSlaStore = defineStore('sla', () => {
       // Detectar campo de cumplimiento dinámicamente
       // Prioridad: cumple_slaX (snake) -> cumpleSlaX (camel) -> lógica específica
       let fieldName = null
-      
+
       if (tipo === 'Nuevo Personal') fieldName = ['cumple_sla1', 'cumpleSla1']
       else if (tipo === 'Reemplazo') fieldName = ['cumple_sla2', 'cumpleSla2']
-      
+
       let cumplidos = 0
-      
+
       if (fieldName) {
         cumplidos = records.filter(r => r[fieldName[0]] === true || r[fieldName[1]] === true).length
       } else {
@@ -149,7 +149,7 @@ export const useSlaStore = defineStore('sla', () => {
            cumplidos = records.filter(r => r[genericField] === true).length
         }
       }
-      
+
       result[tipo] = records.length > 0 ? ((cumplidos / records.length) * 100).toFixed(2) : 0
     })
 
@@ -184,11 +184,11 @@ export const useSlaStore = defineStore('sla', () => {
       }
 
       kpis[tipo].total++
-      
+
       // Chequeo exhaustivo de cumplimiento
       if (
-        record.cumple_sla1 || record.cumpleSla1 || 
-        record.cumple_sla2 || record.cumpleSla2 || 
+        record.cumple_sla1 || record.cumpleSla1 ||
+        record.cumple_sla2 || record.cumpleSla2 ||
         record.cumpleSla === true
       ) {
         kpis[tipo].cumplidos++
@@ -210,7 +210,7 @@ export const useSlaStore = defineStore('sla', () => {
     const totalSolicitudes = filteredData.value.length
     const cumplidas = filteredData.value.filter((record) => {
       return (
-        record.cumpleSla === true || 
+        record.cumpleSla === true ||
         record.cumple_sla1 === true || record.cumpleSla1 === true ||
         record.cumple_sla2 === true || record.cumpleSla2 === true
       )
@@ -228,15 +228,15 @@ export const useSlaStore = defineStore('sla', () => {
     const data = filteredData.value
 
     data.forEach((record) => {
-      const role = record.bloque_tech || record.bloqueTech || 'Sin Especificar'
+      const role = record.area || record.Area || 'Sin Especificar'
       if (!grouped[role]) grouped[role] = { role, totals: {}, cumplidos: {} }
 
       const tipo = record.tipo_solicitud || record.tipoSolicitud || 'Sin Tipo'
       grouped[role].totals[tipo] = (grouped[role].totals[tipo] || 0) + 1
 
       // Buscar si cumple alguno de los SLAs asociados
-      const cumple = 
-        record.cumple_sla1 || record.cumpleSla1 || 
+      const cumple =
+        record.cumple_sla1 || record.cumpleSla1 ||
         record.cumple_sla2 || record.cumpleSla2 ||
         record.cumpleSla === true
 
@@ -258,7 +258,7 @@ export const useSlaStore = defineStore('sla', () => {
         role: item.role,
         slaPercentages,
         // Compatibilidad con Master si algún componente lo necesita plano
-        ...slaPercentages 
+        ...slaPercentages
       }
     })
   })
@@ -277,7 +277,7 @@ export const useSlaStore = defineStore('sla', () => {
       const normalize = (r) => {
         return {
           id_solicitud: (r.id ?? r.idSolicitud ?? r.id_solicitud ?? r.Id ?? r.IdSolicitud ?? null),
-          bloque_tech: (r.bloqueTech ?? r.BloqueTech ?? r.bloque_tech ?? r.bloque ?? null),
+          area: (r.area ?? r.Area ?? null),
           tipo_solicitud: (r.tipoSolicitud ?? r.TipoSolicitud ?? r.tipo_solicitud ?? null),
           prioridad: (r.prioridad ?? r.Prioridad ?? null),
           fecha_solicitud: (r.fechaSolicitud ?? r.FechaSolicitud ?? r.fecha_solicitud ?? null),
@@ -294,7 +294,7 @@ export const useSlaStore = defineStore('sla', () => {
 
       const normalized = items.map(normalize)
       slaData.value = normalized
-      allData.value = normalized 
+      allData.value = normalized
     } catch (err) {
       error.value = err.message || 'Error al cargar los datos SLA'
       console.error('Error fetching SLA data:', err)
@@ -315,7 +315,7 @@ export const useSlaStore = defineStore('sla', () => {
       const normalize = (r) => {
         return {
           id_solicitud: (r.id ?? r.idSolicitud ?? r.id_solicitud ?? r.Id ?? null),
-          bloque_tech: (r.bloqueTech ?? r.BloqueTech ?? r.bloque_tech ?? null),
+          area: (r.area ?? r.Area ?? null),
           tipo_solicitud: (r.tipoSolicitud ?? r.TipoSolicitud ?? r.tipo_solicitud ?? null),
           prioridad: (r.prioridad ?? r.Prioridad ?? null),
           fecha_solicitud: (r.fechaSolicitud ?? r.FechaSolicitud ?? r.fecha_solicitud ?? null),
@@ -331,7 +331,7 @@ export const useSlaStore = defineStore('sla', () => {
       const normalized = items.map(normalize)
       slaData.value = normalized
       allData.value = normalized
-      
+
       console.log(`[slaStore] Datos cargados para reportes: ${normalized.length} registros`)
     } catch (err) {
       error.value = err.message || 'Error al cargar datos de reportes'
@@ -346,7 +346,7 @@ export const useSlaStore = defineStore('sla', () => {
     error.value = null
     try {
       const response = await slaService.uploadExcel(file)
-      await fetchSlaData() 
+      await fetchSlaData()
       return response
     } catch (err) {
       error.value = err.message || 'Error al cargar el archivo Excel'
@@ -388,21 +388,21 @@ export const useSlaStore = defineStore('sla', () => {
     filters.value = {
       startDate: null,
       endDate: null,
-      bloqueTech: [],
+      area: [],
       tipoSolicitud: [],
       prioridad: [],
       cumpleSla: null,
     }
   }
-  
+
   function markReportsAsInitialized() {
     isReportsInitialized.value = true
   }
-  
+
   function saveReportFilters(reportFilters) {
     appliedReportFilters.value = { ...reportFilters }
   }
-  
+
   function resetReportsInitialization() {
     isReportsInitialized.value = false
     appliedReportFilters.value = {
