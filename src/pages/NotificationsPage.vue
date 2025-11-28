@@ -559,7 +559,7 @@ const lastUpdate = computed(() => {
   return now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
 })
 
-// Orden principal de visualización
+// Orden principal de visualización .
 const primaryView = ref('incumplimiento')
 
 function dismissAlert(id) {
