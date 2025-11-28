@@ -50,12 +50,20 @@
                     <q-card flat bordered style="border: 2px solid #000">
                       <q-card-section class="q-pa-lg">
                         <div class="text-caption text-grey-7 text-weight-medium">SLA1 Predicho</div>
-                        <div class="text-h3 text-weight-bold" :class="getPredictionColor(78.5)">
-                          78.5%
+                        <div
+                          class="text-h3 text-weight-bold"
+                          :class="getPredictionColor(predictionData.sla1_prediction)"
+                        >
+                          {{ predictionData.sla1_prediction.toFixed(1) }}%
                         </div>
                         <div class="text-caption text-grey-6 q-mt-sm">
-                          <q-icon name="trending_down" size="xs" />
-                          -2.3% vs mes actual
+                          <q-icon
+                            :name="
+                              predictionData.trend === 'mejorando' ? 'trending_up' : 'trending_down'
+                            "
+                            size="xs"
+                          />
+                          {{ predictionData.trend }}
                         </div>
                       </q-card-section>
                     </q-card>
@@ -65,12 +73,20 @@
                     <q-card flat bordered style="border: 2px solid #000">
                       <q-card-section class="q-pa-lg">
                         <div class="text-caption text-grey-7 text-weight-medium">SLA2 Predicho</div>
-                        <div class="text-h3 text-weight-bold" :class="getPredictionColor(85.3)">
-                          85.3%
+                        <div
+                          class="text-h3 text-weight-bold"
+                          :class="getPredictionColor(predictionData.sla2_prediction)"
+                        >
+                          {{ predictionData.sla2_prediction.toFixed(1) }}%
                         </div>
                         <div class="text-caption text-grey-6 q-mt-sm">
-                          <q-icon name="trending_up" size="xs" />
-                          +3.1% vs mes actual
+                          <q-icon
+                            :name="
+                              predictionData.trend === 'mejorando' ? 'trending_up' : 'trending_down'
+                            "
+                            size="xs"
+                          />
+                          {{ predictionData.trend }}
                         </div>
                       </q-card-section>
                     </q-card>
@@ -87,13 +103,15 @@
                     <div class="col">
                       <q-linear-progress
                         size="20px"
-                        :value="0.87"
+                        :value="predictionData.confidence"
                         color="black"
                         class="rounded-borders"
                       />
                     </div>
                     <div class="col-auto q-ml-md">
-                      <span class="text-h6 text-weight-bold">87%</span>
+                      <span class="text-h6 text-weight-bold"
+                        >{{ (predictionData.confidence * 100).toFixed(0) }}%</span
+                      >
                     </div>
                   </div>
                 </div>
@@ -387,8 +405,9 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
+import { slaService } from 'src/services/slaService'
 
 const $q = useQuasar()
 
@@ -400,10 +419,17 @@ const simulation = ref({
 })
 
 const simulationResults = ref({
-  sla1: 78.5,
-  sla1Change: -2.3,
-  sla2: 85.3,
-  sla2Change: 3.1,
+  sla1: 0,
+  sla1Change: 0,
+  sla2: 0,
+  sla2Change: 0,
+})
+
+const predictionData = ref({
+  sla1_prediction: 0,
+  sla2_prediction: 0,
+  trend: 'neutral',
+  confidence: 0,
 })
 
 const priorityOptions = ['Alta Prioridad', 'Equilibrada', 'Baja Prioridad']
@@ -414,34 +440,65 @@ function getPredictionColor(value) {
   return 'text-negative'
 }
 
-async function recalculatePredictions() {
+async function loadPredictions() {
   loading.value = true
-
   try {
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    const data = await slaService.getPrediction()
+    predictionData.value = data
 
+    // Inicializar simulación con valores actuales
+    simulationResults.value = {
+      sla1: data.sla1_prediction.toFixed(1),
+      sla1Change: 0,
+      sla2: data.sla2_prediction.toFixed(1),
+      sla2Change: 0,
+    }
+  } catch (error) {
+    console.error('Error loading predictions:', error)
     $q.notify({
-      type: 'positive',
-      message: 'Predicciones actualizadas',
-      caption: 'Los modelos han sido recalculados con los datos más recientes',
+      type: 'negative',
+      message: 'Error al cargar predicciones',
       position: 'top',
-      icon: 'check_circle',
     })
   } finally {
     loading.value = false
   }
 }
 
+async function recalculatePredictions() {
+  await loadPredictions()
+  $q.notify({
+    type: 'positive',
+    message: 'Predicciones actualizadas',
+    caption: 'Los modelos han sido recalculados con los datos más recientes',
+    position: 'top',
+    icon: 'check_circle',
+  })
+}
+
 function runSimulation() {
-  // Simular cálculo
-  const baseValue = 80
-  const volumeImpact = (50 - simulation.value.volume) * 0.3
+  // Simulación basada en datos reales base
+  const baseSla1 = predictionData.value.sla1_prediction
+  const baseSla2 = predictionData.value.sla2_prediction
+
+  // Factores de impacto simulados
+  let volumeImpact = 0
+  if (simulation.value.volume > 100) volumeImpact = -5
+  else if (simulation.value.volume > 50) volumeImpact = -2
+  else volumeImpact = 1
+
+  let priorityImpact = 0
+  if (simulation.value.priority === 'Alta Prioridad') priorityImpact = -3
+  if (simulation.value.priority === 'Baja Prioridad') priorityImpact = 2
+
+  const newSla1 = Math.min(100, Math.max(0, baseSla1 + volumeImpact + priorityImpact))
+  const newSla2 = Math.min(100, Math.max(0, baseSla2 + volumeImpact + priorityImpact + 2)) // SLA2 suele ser más flexible
 
   simulationResults.value = {
-    sla1: (baseValue + volumeImpact - 1.5).toFixed(1),
-    sla1Change: (volumeImpact - 1.5).toFixed(1),
-    sla2: (baseValue + volumeImpact + 5.3).toFixed(1),
-    sla2Change: (volumeImpact + 5.3).toFixed(1),
+    sla1: newSla1.toFixed(1),
+    sla1Change: (newSla1 - baseSla1).toFixed(1),
+    sla2: newSla2.toFixed(1),
+    sla2Change: (newSla2 - baseSla2).toFixed(1),
   }
 
   $q.notify({
@@ -451,6 +508,10 @@ function runSimulation() {
     icon: 'science',
   })
 }
+
+onMounted(() => {
+  loadPredictions()
+})
 </script>
 
 <style scoped lang="scss">
