@@ -50,12 +50,19 @@
                     <q-card flat bordered style="border: 2px solid #000">
                       <q-card-section class="q-pa-lg">
                         <div class="text-caption text-grey-7 text-weight-medium">SLA1 Predicho</div>
-                        <div class="text-h3 text-weight-bold" :class="getPredictionColor(predictedSla1)">
+                        <div
+                          class="text-h3 text-weight-bold"
+                          :class="getPredictionColor(predictedSla1)"
+                        >
                           {{ predictedSla1.toFixed(1) }} %
                         </div>
                         <div class="text-caption text-grey-6 q-mt-sm">
-                          <q-icon :name="predictionMetrics.trend >= 0 ? 'trending_up' : 'trending_down'" size="xs" />
-                          {{ predictionMetrics.trend >= 0 ? '+' : '' }}{{ predictionMetrics.trend.toFixed(1) }} % vs mes actual
+                          <q-icon
+                            :name="predictionMetrics.trend >= 0 ? 'trending_up' : 'trending_down'"
+                            size="xs"
+                          />
+                          {{ predictionMetrics.trend >= 0 ? '+' : ''
+                          }}{{ predictionMetrics.trend.toFixed(1) }} % vs mes actual
                         </div>
                       </q-card-section>
                     </q-card>
@@ -65,12 +72,19 @@
                     <q-card flat bordered style="border: 2px solid #000">
                       <q-card-section class="q-pa-lg">
                         <div class="text-caption text-grey-7 text-weight-medium">SLA2 Predicho</div>
-                        <div class="text-h3 text-weight-bold" :class="getPredictionColor(predictedSla2)">
+                        <div
+                          class="text-h3 text-weight-bold"
+                          :class="getPredictionColor(predictedSla2)"
+                        >
                           {{ predictedSla2.toFixed(1) }} %
                         </div>
                         <div class="text-caption text-grey-6 q-mt-sm">
-                          <q-icon :name="predictionMetrics.trend >= 0 ? 'trending_up' : 'trending_down'" size="xs" />
-                          {{ predictionMetrics.trend >= 0 ? '+' : '' }}{{ (predictionMetrics.trend + 2).toFixed(1) }} % vs mes actual
+                          <q-icon
+                            :name="predictionMetrics.trend >= 0 ? 'trending_up' : 'trending_down'"
+                            size="xs"
+                          />
+                          {{ predictionMetrics.trend >= 0 ? '+' : ''
+                          }}{{ (predictionMetrics.trend + 2).toFixed(1) }} % vs mes actual
                         </div>
                       </q-card-section>
                     </q-card>
@@ -93,7 +107,9 @@
                       />
                     </div>
                     <div class="col-auto q-ml-md">
-                      <span class="text-h6 text-weight-bold"> {{ (predictionData.confidence * 100).toFixed(0) }} % </span>
+                      <span class="text-h6 text-weight-bold">
+                        {{ (predictionData.confidence * 100).toFixed(0) }} %
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -138,19 +154,25 @@
                 <div class="col-4">
                   <div class="text-center">
                     <div class="text-caption text-grey-7">Promedio</div>
-                    <div class="text-h6 text-weight-bold text-black">{{ historyStats.average.toFixed(1) }} %</div>
+                    <div class="text-h6 text-weight-bold text-black">
+                      {{ historyStats.average.toFixed(1) }} %
+                    </div>
                   </div>
                 </div>
                 <div class="col-4">
                   <div class="text-center">
                     <div class="text-caption text-grey-7">Máximo</div>
-                    <div class="text-h6 text-weight-bold text-positive">{{ historyStats.max.toFixed(1) }} %</div>
+                    <div class="text-h6 text-weight-bold text-positive">
+                      {{ historyStats.max.toFixed(1) }} %
+                    </div>
                   </div>
                 </div>
                 <div class="col-4">
                   <div class="text-center">
                     <div class="text-caption text-grey-7">Mínimo</div>
-                    <div class="text-h6 text-weight-bold text-negative">{{ historyStats.min.toFixed(1) }} %</div>
+                    <div class="text-h6 text-weight-bold text-negative">
+                      {{ historyStats.min.toFixed(1) }} %
+                    </div>
                   </div>
                 </div>
               </div>
@@ -490,14 +512,14 @@ const historyStats = computed(() => {
   if (!rawHistoryData.value || rawHistoryData.value.length === 0) {
     return { average: 0, max: 0, min: 0 }
   }
-  
-  const values = rawHistoryData.value.map(d => d.compliance)
+
+  const values = rawHistoryData.value.map((d) => d.compliance)
   const sum = values.reduce((a, b) => a + b, 0)
-  
+
   return {
     average: sum / values.length,
     max: Math.max(...values),
-    min: Math.min(...values)
+    min: Math.min(...values),
   }
 })
 
@@ -516,7 +538,7 @@ async function loadData() {
     // Calcular nivel de confianza basado en cantidad de datos
     const dataPoints = rawHistoryData.value.length
     // Más datos = mayor confianza (máx 95% con 12+ meses)
-    predictionData.value.confidence = Math.min(0.95, 0.5 + (dataPoints * 0.075))
+    predictionData.value.confidence = Math.min(0.95, 0.5 + dataPoints * 0.075)
 
     // Si no hay datos, inicializar con estructura vacía
     if (rawHistoryData.value.length === 0) {
@@ -605,7 +627,7 @@ function runSimulation() {
   const baseCompliance = historyStats.value.average || 80
   const results = predictiveService.runSimulation({
     ...simulation.value,
-    baseCompliance
+    baseCompliance,
   })
   simulationResults.value = results
 }

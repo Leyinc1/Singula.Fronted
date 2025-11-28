@@ -52,37 +52,37 @@ export const predictiveService = {
 
     // 1. Agrupar por mes (YYYY-MM)
     const groupedByMonth = {}
-    
-    requests.forEach(req => {
+
+    requests.forEach((req) => {
       // Soportar tanto camelCase (API) como snake_case
       const fechaSolicitud = req.fechaSolicitud || req.fecha_solicitud
       if (!fechaSolicitud) return
-      
+
       const date = new Date(fechaSolicitud)
       if (isNaN(date.getTime())) return // Fecha inválida
-      
+
       const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-      
+
       if (!groupedByMonth[monthKey]) {
         groupedByMonth[monthKey] = {
           total: 0,
           cumplidas: 0,
-          monthLabel: date.toLocaleDateString('es-ES', { month: 'short' })
+          monthLabel: date.toLocaleDateString('es-ES', { month: 'short' }),
         }
       }
-      
+
       groupedByMonth[monthKey].total++
-      
+
       // Calcular cumplimiento basado en días SLA
       // Si numDiasSla <= umbral (ej: 30 para nuevo, 15 para reemplazo), cumple
       const numDiasSla = req.numDiasSla || req.num_dias_sla || 0
       const resumenSla = (req.resumenSla || req.resumen_sla || '').toLowerCase()
-      
+
       let umbral = 30 // Por defecto, SLA de 30 días
       if (resumenSla.includes('reemplazo')) {
         umbral = 15
       }
-      
+
       if (numDiasSla <= umbral) {
         groupedByMonth[monthKey].cumplidas++
       }
@@ -90,22 +90,22 @@ export const predictiveService = {
 
     // 2. Convertir a array y ordenar cronológicamente
     const sortedKeys = Object.keys(groupedByMonth).sort()
-    
+
     // Si no hay suficientes meses, usar datos mock
     if (sortedKeys.length < 2) {
       console.log('Datos insuficientes, combinando con datos mock')
       return MOCK_HISTORY_DATA
     }
-    
+
     // 3. Calcular % y formatear
-    return sortedKeys.map(key => {
+    return sortedKeys.map((key) => {
       const data = groupedByMonth[key]
       const compliance = data.total > 0 ? (data.cumplidas / data.total) * 100 : 0
-      
+
       return {
         month: data.monthLabel.charAt(0).toUpperCase() + data.monthLabel.slice(1), // Capitalizar
         compliance: parseFloat(compliance.toFixed(1)),
-        fullDate: key
+        fullDate: key,
       }
     })
   },
@@ -139,7 +139,7 @@ export const predictiveService = {
     historyData.forEach((item, index) => {
       const x = index
       const y = item.compliance // Asumimos que viene un campo 'compliance' o similar
-      
+
       sumX += x
       sumY += y
       sumXY += x * y
@@ -200,7 +200,7 @@ export const predictiveService = {
   runSimulation(inputs) {
     // Usar el promedio histórico como base, o 80% por defecto
     const baseCompliance = inputs.baseCompliance || 80
-    
+
     // Factor base: empezamos con el cumplimiento histórico promedio
     let simulatedCompliance = baseCompliance
 
@@ -219,7 +219,7 @@ export const predictiveService = {
 
     // Limitar entre 0 y 100
     simulatedCompliance = Math.min(100, Math.max(0, simulatedCompliance))
-    
+
     // SLA2 suele tener mejor cumplimiento (solicitudes menos urgentes)
     const sla2Compliance = Math.min(100, simulatedCompliance + 5)
 
