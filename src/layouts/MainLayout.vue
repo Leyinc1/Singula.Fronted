@@ -15,9 +15,11 @@
 
         <q-space />
 
-        <!-- Botón de notificaciones -->
         <q-btn flat round dense icon="notifications" class="q-mr-sm" @click="goToNotifications">
-          <q-badge color="negative" floating>3</q-badge>
+          <q-badge :color="badgeColor" floating v-if="unreadCount > 0" text-color="white">
+            {{ unreadCount }}
+          </q-badge>
+
           <q-tooltip>Notificaciones</q-tooltip>
         </q-btn>
 
@@ -74,7 +76,6 @@
           </q-item>
         </q-list>
 
-        <!-- Footer del drawer con branding de Tata -->
         <div class="absolute-bottom q-pa-md text-center" style="border-top: 1px solid #e0e0e0">
           <div class="text-caption text-grey-7">Powered by</div>
           <div class="text-body2 text-weight-bold text-black">Tata Consultancy Services</div>
@@ -89,26 +90,31 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from 'src/stores/authStore'
+import { useNotificationStore } from 'stores/notification-store'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const notificationStore = useNotificationStore()
 
 const leftDrawerOpen = ref(false)
 
 const userName = computed(() => authStore.userName)
 const isAdmin = computed(() => authStore.user?.role === 'admin')
 
+// --- VARIABLES DEL STORE ---
+const unreadCount = computed(() => notificationStore.totalUnread)
+const badgeColor = computed(() => notificationStore.badgeStatusColor) // <--- Color dinámico
+
+onMounted(() => {
+  notificationStore.fetchAlerts()
+})
+
 const menuLinks = computed(() => {
   const links = [
-    {
-      title: 'Dashboard',
-      caption: 'Indicadores y KPIs',
-      icon: 'dashboard',
-      link: '/',
-    },
+    { title: 'Dashboard', caption: 'Indicadores y KPIs', icon: 'dashboard', link: '/' },
     {
       title: 'Administrar',
       caption: 'Gestionar bloques y solicitudes',
@@ -127,15 +133,9 @@ const menuLinks = computed(() => {
       icon: 'notifications',
       link: '/notifications',
     },
-    {
-      title: 'Reportes',
-      caption: 'Generar reportes PDF',
-      icon: 'assessment',
-      link: '/reports',
-    },
+    { title: 'Reportes', caption: 'Generar reportes PDF', icon: 'assessment', link: '/reports' },
   ]
 
-  // Agregar configuración solo para administradores
   if (isAdmin.value) {
     links.push({
       title: 'Configuración',
