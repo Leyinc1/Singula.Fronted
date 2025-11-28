@@ -24,10 +24,6 @@
             <!-- Formulario de Login -->
             <q-card-section class="q-px-xl q-pb-xl">
               <q-form @submit="handleLogin" class="q-gapx-md">
-                <div class="text-h6 text-weight-medium text-black q-mb-md">
-                  <q-icon name="login" class="q-mr-sm" />
-                  Iniciar Sesión
-                </div>
 
                 <q-input
                   v-model="loginForm.email"
@@ -88,17 +84,6 @@
                     size="sm"
                     @click="handleForgotPassword"
                   />
-                </div>
-
-                <q-separator class="q-my-md" />
-
-                <div class="text-center">
-                  <span class="text-caption text-grey-8">
-                    ¿No tienes cuenta?
-                    <router-link to="/register" class="text-primary text-weight-bold">
-                      Regístrate aquí
-                    </router-link>
-                  </span>
                 </div>
               </q-form>
             </q-card-section>
