@@ -4,86 +4,6 @@
  */
 import apiClient from './api'
 
-// ============================================
-// GENERADOR DE DATOS MOCK ESCALABLE
-// ============================================
-function generateMockData() {
-  const bloques = ['Backend', 'Frontend', 'QA', 'Mobile', 'DevOps', 'Data']
-
-  const prioridades = ['Crítica', 'Alta', 'Media', 'Baja']
-  const tiposSolicitud = ['Nuevo Personal', 'Reemplazo']
-  const nombres = [
-    'Juan Pérez',
-    'María García',
-    'Carlos López',
-    'Ana Martínez',
-    'Pedro Sánchez',
-    'Laura Rodríguez',
-    'Roberto González',
-    'Sofia Hernández',
-    'Diego Ramírez',
-    'Valentina Torres',
-    'Camila Vargas',
-    'Andrés Morales',
-    'Isabella Cruz',
-    'Santiago Ruiz',
-    'Lucía Fernández',
-    'Mateo Jiménez',
-    'Martina Castro',
-    'Sebastián Ortiz',
-    'Valeria Romero',
-    'Daniel Navarro',
-    'Emma Silva',
-    'Lucas Medina',
-    'Mia Herrera',
-    'Gabriel Vega',
-    'Victoria Ramos',
-  ]
-
-  const mockData = []
-  let id = 1
-
-  // Generar 70 registros (5 por cada uno de los 14 bloques)
-  for (let i = 0; i < 70; i++) {
-    const bloqueAleatorio = bloques[Math.floor(Math.random() * bloques.length)]
-    const tipoSolicitud = tiposSolicitud[Math.floor(Math.random() * tiposSolicitud.length)]
-    const prioridad = prioridades[Math.floor(Math.random() * prioridades.length)]
-    const nombreAleatorio = nombres[Math.floor(Math.random() * nombres.length)]
-
-    // Generar fechas aleatorias en los últimos 4 meses
-    const fechaSolicitud = new Date(
-      2025,
-      Math.floor(Math.random() * 4),
-      Math.floor(Math.random() * 28) + 1,
-    )
-    const diasTranscurridos = Math.floor(Math.random() * 50) + 5
-    const fechaIngreso = new Date(fechaSolicitud)
-    fechaIngreso.setDate(fechaIngreso.getDate() + diasTranscurridos)
-
-    // Determinar cumplimiento de SLA basado en tipo y días
-    const sla1 = 35 // Nuevo Personal
-    const sla2 = 20 // Reemplazo
-
-    const cumple_sla1 = tipoSolicitud === 'Nuevo Personal' ? diasTranscurridos <= sla1 : null
-    const cumple_sla2 = tipoSolicitud === 'Reemplazo' ? diasTranscurridos <= sla2 : null
-
-    mockData.push({
-      id: id++,
-      bloque_tech: bloqueAleatorio, // Bloque tecnológico: "Backend", "Frontend", "QA", etc.
-      tipo_solicitud: tipoSolicitud,
-      prioridad: prioridad,
-      fecha_solicitud: fechaSolicitud.toISOString().split('T')[0],
-      fecha_ingreso: fechaIngreso.toISOString().split('T')[0],
-      dias_transcurridos: diasTranscurridos,
-      cumple_sla1: cumple_sla1,
-      cumple_sla2: cumple_sla2,
-      nombre_personal: nombreAleatorio,
-    })
-  }
-
-  return mockData
-}
-
 export const slaService = {
   /**
    * Obtener datos SLA con filtros opcionales
@@ -94,20 +14,18 @@ export const slaService = {
     try {
       const params = {}
 
-      if (filters.startDate) params.start_date = filters.startDate
-      if (filters.endDate) params.end_date = filters.endDate
-      if (filters.bloqueTech) params.bloque_tech = filters.bloqueTech
-      if (filters.tipoSolicitud) params.tipo_solicitud = filters.tipoSolicitud
+      if (filters.startDate) params.startDate = filters.startDate
+      if (filters.endDate) params.endDate = filters.endDate
+      if (filters.bloqueTech) params.bloqueTech = filters.bloqueTech
+      if (filters.tipoSolicitud) params.tipoSolicitud = filters.tipoSolicitud
+      if (filters.prioridad) params.prioridad = filters.prioridad
+      if (filters.cumpleSla !== undefined) params.cumpleSla = filters.cumpleSla
 
-      const response = await apiClient.get('/sla/data', { params })
+      const response = await apiClient.get('/dashboard/sla/data', { params })
       return response.data
     } catch (error) {
       console.error('Error al obtener datos SLA:', error)
-
-      // Retornar datos mock en caso de error (para desarrollo)
-      return {
-        data: generateMockData(),
-      }
+      throw error
     }
   },
 
@@ -121,7 +39,7 @@ export const slaService = {
       const formData = new FormData()
       formData.append('file', file)
 
-      const response = await apiClient.post('/sla/upload', formData, {
+      const response = await apiClient.post('/api/sla/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -141,43 +59,113 @@ export const slaService = {
    */
   async createManualEntry(solicitud) {
     try {
-      const response = await apiClient.post('/sla/manual', solicitud)
+      const response = await apiClient.post('/api/sla/manual', solicitud)
       return response.data
     } catch (error) {
       console.error('Error al crear solicitud manual:', error)
-
-      // Para desarrollo, simular creación exitosa
-      return {
-        success: true,
-        data: {
-          id: Date.now(),
-          ...solicitud,
-        },
-        message: 'Solicitud creada exitosamente (mock)',
-      }
+      throw error
     }
   },
 
   /**
-   * Obtener predicción de cumplimiento SLA
+   * Obtener predicción de cumplimiento SLA (Calculado en cliente)
    * @returns {Promise} - Promesa con datos de predicción
    */
   async getPrediction() {
     try {
-      const response = await apiClient.get('/sla/prediction')
-      return response.data
+      // 1. Obtener datos históricos (últimos 6 meses)
+      const endDate = new Date()
+      const startDate = new Date()
+      startDate.setMonth(startDate.getMonth() - 6)
+
+      const response = await this.getSlaData({
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+      })
+
+      const data = response.data || []
+
+      if (data.length === 0) {
+        return {
+          sla1_prediction: 0,
+          sla2_prediction: 0,
+          trend: 'neutral',
+          confidence: 0,
+          history: [],
+        }
+      }
+
+      // 2. Calcular cumplimiento mensual
+      const monthlyStats = {}
+
+      data.forEach((item) => {
+        const date = new Date(item.fechaSolicitud)
+        const monthKey = `${date.getFullYear()}-${date.getMonth() + 1}`
+
+        if (!monthlyStats[monthKey]) {
+          monthlyStats[monthKey] = {
+            total: 0,
+            sla1_ok: 0,
+            sla2_ok: 0,
+          }
+        }
+
+        monthlyStats[monthKey].total++
+        if (item.cumpleSla1) monthlyStats[monthKey].sla1_ok++
+        if (item.cumpleSla2) monthlyStats[monthKey].sla2_ok++
+      })
+
+      // 3. Preparar datos para regresión
+      const months = Object.keys(monthlyStats).sort()
+      const x = months.map((_, i) => i) // 0, 1, 2...
+      const y1 = months.map((m) => (monthlyStats[m].sla1_ok / monthlyStats[m].total) * 100)
+      const y2 = months.map((m) => (monthlyStats[m].sla2_ok / monthlyStats[m].total) * 100)
+
+      // 4. Regresión Lineal Simple
+      const predictNext = (xValues, yValues) => {
+        const n = xValues.length
+        if (n < 2) return yValues[n - 1] || 0
+
+        const sumX = xValues.reduce((a, b) => a + b, 0)
+        const sumY = yValues.reduce((a, b) => a + b, 0)
+        const sumXY = xValues.reduce((a, b, i) => a + b * yValues[i], 0)
+        const sumXX = xValues.reduce((a, b) => a + b * b, 0)
+
+        const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX)
+        const intercept = (sumY - slope * sumX) / n
+
+        return slope * n + intercept // Predicción para el siguiente mes (x = n)
+      }
+
+      const predSla1 = predictNext(x, y1)
+      const predSla2 = predictNext(x, y2)
+
+      // Calcular tendencia general (pendiente de SLA1)
+      const n = x.length
+      const sumX = x.reduce((a, b) => a + b, 0)
+      const sumY = y1.reduce((a, b) => a + b, 0)
+      const sumXY = x.reduce((a, b, i) => a + b * y1[i], 0)
+      const sumXX = x.reduce((a, b) => a + b * b, 0)
+      const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX)
+
+      let trend = 'estable'
+      if (slope > 1) trend = 'mejorando'
+      if (slope < -1) trend = 'empeorando'
+
+      return {
+        sla1_prediction: Math.min(100, Math.max(0, predSla1)),
+        sla2_prediction: Math.min(100, Math.max(0, predSla2)),
+        trend: trend,
+        confidence: Math.min(0.95, 0.5 + data.length / 200), // Confianza basada en volumen de datos
+        history: months.map((m, i) => ({
+          month: m,
+          sla1: y1[i],
+          sla2: y2[i],
+        })),
+      }
     } catch (error) {
       console.error('Error al obtener predicción:', error)
-
-      // Retornar datos mock en caso de error
-      return {
-        data: {
-          sla1_prediction: 78.5,
-          sla2_prediction: 85.3,
-          trend: 'mejorando',
-          confidence: 0.87,
-        },
-      }
+      throw error
     }
   },
 
@@ -187,21 +175,11 @@ export const slaService = {
    */
   async getStatistics() {
     try {
-      const response = await apiClient.get('/sla/statistics')
+      const response = await apiClient.get('/dashboard/sla/statistics')
       return response.data
     } catch (error) {
       console.error('Error al obtener estadísticas:', error)
-
-      // Retornar datos mock
-      return {
-        data: {
-          total_solicitudes: 156,
-          cumplimiento_sla1: 82.5,
-          cumplimiento_sla2: 88.7,
-          promedio_dias_sla1: 28.3,
-          promedio_dias_sla2: 16.8,
-        },
-      }
+      throw error
     }
   },
 }

@@ -87,7 +87,7 @@
                     <div class="col">
                       <q-linear-progress
                         size="20px"
-                        :value="0.87"
+                        :value="predictionData.confidence"
                         color="black"
                         class="rounded-borders"
                       />
@@ -511,7 +511,7 @@ function getPredictionColor(value) {
   return 'text-negative'
 }
 
-async function recalculatePredictions() {
+async function loadPredictions() {
   loading.value = true
   try {
     // Simular que obtenemos nuevos datos o re-entrenamos
@@ -538,6 +538,17 @@ async function recalculatePredictions() {
   }
 }
 
+async function recalculatePredictions() {
+  await loadPredictions()
+  $q.notify({
+    type: 'positive',
+    message: 'Predicciones actualizadas',
+    caption: 'Los modelos han sido recalculados con los datos más recientes',
+    position: 'top',
+    icon: 'check_circle',
+  })
+}
+
 function runSimulation() {
   const results = predictiveService.runSimulation(simulation.value)
   simulationResults.value = results
@@ -549,6 +560,10 @@ function runSimulation() {
     position: 'top',
   })
 }
+
+onMounted(() => {
+  loadPredictions()
+})
 </script>
 
 <style scoped lang="scss">
