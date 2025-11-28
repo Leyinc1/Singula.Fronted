@@ -45,14 +45,16 @@ apiClient.interceptors.response.use(
       switch (error.response.status) {
         case 401: {
           // Token expirado o inválido
-          const authStore = useAuthStore()
-          authStore.logout()
+          // TODO: En producción, descomentar el logout y redirect
+          console.warn('401 Unauthorized - Usando modo mock para desarrollo')
+          // const authStore = useAuthStore()
+          // authStore.logout()
 
           // Solo redirigir si no estamos ya en páginas públicas
-          const currentPath = window.location.hash
-          if (!currentPath.includes('/login') && !currentPath.includes('/config')) {
-            window.location.href = '/#/login'
-          }
+          // const currentPath = window.location.hash
+          // if (!currentPath.includes('/login') && !currentPath.includes('/config')) {
+          //   window.location.href = '/#/login'
+          // }
           break
         }
         case 403:

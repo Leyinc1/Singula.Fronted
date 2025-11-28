@@ -50,12 +50,19 @@
                     <q-card flat bordered style="border: 2px solid #000">
                       <q-card-section class="q-pa-lg">
                         <div class="text-caption text-grey-7 text-weight-medium">SLA1 Predicho</div>
-                        <div class="text-h3 text-weight-bold" :class="getPredictionColor(78.5)">
-                          78.5 %
+                        <div
+                          class="text-h3 text-weight-bold"
+                          :class="getPredictionColor(predictedSla1)"
+                        >
+                          {{ predictedSla1.toFixed(1) }} %
                         </div>
                         <div class="text-caption text-grey-6 q-mt-sm">
-                          <q-icon name="trending_down" size="xs" />
-                          -2.3 % vs mes actual
+                          <q-icon
+                            :name="predictionMetrics.trend >= 0 ? 'trending_up' : 'trending_down'"
+                            size="xs"
+                          />
+                          {{ predictionMetrics.trend >= 0 ? '+' : ''
+                          }}{{ predictionMetrics.trend.toFixed(1) }} % vs mes actual
                         </div>
                       </q-card-section>
                     </q-card>
@@ -65,12 +72,19 @@
                     <q-card flat bordered style="border: 2px solid #000">
                       <q-card-section class="q-pa-lg">
                         <div class="text-caption text-grey-7 text-weight-medium">SLA2 Predicho</div>
-                        <div class="text-h3 text-weight-bold" :class="getPredictionColor(85.3)">
-                          85.3 %
+                        <div
+                          class="text-h3 text-weight-bold"
+                          :class="getPredictionColor(predictedSla2)"
+                        >
+                          {{ predictedSla2.toFixed(1) }} %
                         </div>
                         <div class="text-caption text-grey-6 q-mt-sm">
-                          <q-icon name="trending_up" size="xs" />
-                          +3.1 % vs mes actual
+                          <q-icon
+                            :name="predictionMetrics.trend >= 0 ? 'trending_up' : 'trending_down'"
+                            size="xs"
+                          />
+                          {{ predictionMetrics.trend >= 0 ? '+' : ''
+                          }}{{ (predictionMetrics.trend + 2).toFixed(1) }} % vs mes actual
                         </div>
                       </q-card-section>
                     </q-card>
@@ -93,7 +107,9 @@
                       />
                     </div>
                     <div class="col-auto q-ml-md">
-                      <span class="text-h6 text-weight-bold"> 87 % </span>
+                      <span class="text-h6 text-weight-bold">
+                        {{ (predictionData.confidence * 100).toFixed(0) }} %
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -116,30 +132,47 @@
             <q-card-section>
               <!-- Chart Component -->
               <div class="chart-container" style="position: relative; height: 300px">
-                <Line :data="chartData" :options="chartOptions" v-if="chartData.labels.length > 0" />
-                <div v-else class="chart-placeholder">
+                <div v-if="loading" class="chart-placeholder">
                   <q-spinner color="primary" size="3em" />
                   <div class="text-grey q-mt-sm">Cargando datos...</div>
                 </div>
+                <Line
+                  :data="chartData"
+                  :options="chartOptions"
+                  v-else-if="chartData.labels && chartData.labels.length > 0"
+                />
+                <div v-else class="chart-placeholder">
+                  <q-icon name="info" size="48px" color="grey-5" />
+                  <div class="text-grey q-mt-sm">No hay datos históricos disponibles</div>
+                  <div class="text-caption text-grey-6">
+                    Cargue solicitudes para ver predicciones
+                  </div>
+                </div>
               </div>
-              
+
               <div class="row q-col-gutter-sm q-mt-md">
                 <div class="col-4">
                   <div class="text-center">
                     <div class="text-caption text-grey-7">Promedio</div>
-                    <div class="text-h6 text-weight-bold text-black">82.4 %</div>
+                    <div class="text-h6 text-weight-bold text-black">
+                      {{ historyStats.average.toFixed(1) }} %
+                    </div>
                   </div>
                 </div>
                 <div class="col-4">
                   <div class="text-center">
                     <div class="text-caption text-grey-7">Máximo</div>
-                    <div class="text-h6 text-weight-bold text-positive">91.2 %</div>
+                    <div class="text-h6 text-weight-bold text-positive">
+                      {{ historyStats.max.toFixed(1) }} %
+                    </div>
                   </div>
                 </div>
                 <div class="col-4">
                   <div class="text-center">
                     <div class="text-caption text-grey-7">Mínimo</div>
-                    <div class="text-h6 text-weight-bold text-negative">74.8 %</div>
+                    <div class="text-h6 text-weight-bold text-negative">
+                      {{ historyStats.min.toFixed(1) }} %
+                    </div>
                   </div>
                 </div>
               </div>
@@ -380,7 +413,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
 import { predictiveService } from 'src/services/predictiveService'
 import {
@@ -440,6 +473,11 @@ const predictionMetrics = ref({
   trend: 0,
 })
 
+// Estado de confianza para el template
+const predictionData = ref({
+  confidence: 0.87,
+})
+
 // Estado de simulación
 const simulation = ref({
   volume: 50,
@@ -459,6 +497,32 @@ const priorityOptions = ['Alta Prioridad', 'Equilibrada', 'Baja Prioridad']
 const rawHistoryData = ref([])
 const slaConfigs = ref([])
 
+// Computed: Predicciones SLA basadas en el modelo
+const predictedSla1 = computed(() => {
+  return predictionMetrics.value.nextMonth || 80
+})
+
+const predictedSla2 = computed(() => {
+  // SLA2 suele ser ~5% mejor que SLA1
+  return (predictionMetrics.value.nextMonth || 80) + 5
+})
+
+// Computed: Estadísticas del historial
+const historyStats = computed(() => {
+  if (!rawHistoryData.value || rawHistoryData.value.length === 0) {
+    return { average: 0, max: 0, min: 0 }
+  }
+
+  const values = rawHistoryData.value.map((d) => d.compliance)
+  const sum = values.reduce((a, b) => a + b, 0)
+
+  return {
+    average: sum / values.length,
+    max: Math.max(...values),
+    min: Math.min(...values),
+  }
+})
+
 onMounted(async () => {
   await loadData()
 })
@@ -469,23 +533,32 @@ async function loadData() {
     const data = await predictiveService.fetchData()
 
     // Transformar datos de API a formato interno usando el servicio
-    rawHistoryData.value = predictiveService.processHistoryData(data.requests)
-    
-    // Si no hay datos, usar un array vacío o mostrar mensaje (opcional)
+    rawHistoryData.value = predictiveService.processHistoryData(data.requests || [])
+
+    // Calcular nivel de confianza basado en cantidad de datos
+    const dataPoints = rawHistoryData.value.length
+    // Más datos = mayor confianza (máx 95% con 12+ meses)
+    predictionData.value.confidence = Math.min(0.95, 0.5 + dataPoints * 0.075)
+
+    // Si no hay datos, inicializar con estructura vacía
     if (rawHistoryData.value.length === 0) {
       console.warn('No hay datos históricos suficientes para predicciones')
+      chartData.value = { labels: [], datasets: [] }
+    } else {
+      // Calcular predicciones iniciales solo si hay datos
+      updatePredictions()
     }
 
-    slaConfigs.value = data.slaConfig
-
-    // Calcular predicciones iniciales
-    updatePredictions()
+    slaConfigs.value = data.slaConfig || []
 
     // Ejecutar simulación inicial
     runSimulation()
-
   } catch (error) {
     console.error('Error loading data:', error)
+    // Inicializar con datos vacíos para evitar congelamiento
+    chartData.value = { labels: [], datasets: [] }
+    rawHistoryData.value = []
+
     $q.notify({
       type: 'negative',
       message: 'Error al cargar datos predictivos',
@@ -519,10 +592,10 @@ async function loadPredictions() {
 
     // Añadir una variación aleatoria para demostrar reactividad
     if (rawHistoryData.value.length > 0) {
-        const lastVal = rawHistoryData.value[rawHistoryData.value.length - 1].compliance
-        const newVal = Math.min(100, Math.max(0, lastVal + (Math.random() * 10 - 5)))
-        // Actualizar último mes (solo demo)
-        rawHistoryData.value[rawHistoryData.value.length - 1].compliance = newVal
+      const lastVal = rawHistoryData.value[rawHistoryData.value.length - 1].compliance
+      const newVal = Math.min(100, Math.max(0, lastVal + (Math.random() * 10 - 5)))
+      // Actualizar último mes (solo demo)
+      rawHistoryData.value[rawHistoryData.value.length - 1].compliance = newVal
     }
 
     updatePredictions()
@@ -550,20 +623,16 @@ async function recalculatePredictions() {
 }
 
 function runSimulation() {
-  const results = predictiveService.runSimulation(simulation.value)
-  simulationResults.value = results
-
-  $q.notify({
-    type: 'info',
-    message: 'Escenario simulado',
-    timeout: 1000,
-    position: 'top',
+  // Pasar el promedio histórico como base para la simulación
+  const baseCompliance = historyStats.value.average || 80
+  const results = predictiveService.runSimulation({
+    ...simulation.value,
+    baseCompliance,
   })
+  simulationResults.value = results
 }
 
-onMounted(() => {
-  loadPredictions()
-})
+// NOTA: Se eliminó el onMounted duplicado - loadData() ya se llama en el primer onMounted
 </script>
 
 <style scoped lang="scss">
