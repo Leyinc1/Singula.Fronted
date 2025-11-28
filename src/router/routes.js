@@ -6,6 +6,13 @@ const routes = [
     component: () => import('pages/LoginPage.vue'),
   },
 
+  // Ruta de Registro (sin layout)
+  {
+    path: '/register',
+    name: 'register',
+    component: () => import('pages/RegisterPage.vue'),
+  },
+
   // Rutas protegidas (con layout)
   {
     path: '/',
@@ -46,6 +53,12 @@ const routes = [
         path: 'profile',
         name: 'profile',
         component: () => import('pages/ProfilePage.vue'),
+      },
+      {
+        path: 'users',
+        name: 'users',
+        component: () => import('pages/UsersPage.vue'),
+        meta: { requiresAdmin: true }, // Solo para administradores
       },
       {
         path: 'config',

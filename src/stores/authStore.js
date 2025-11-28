@@ -4,24 +4,7 @@
  */
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import apiClient from 'src/services/api'
-import { useSlaStore } from './slaStore'
-
-// ========== MODO DESARROLLO - MOCK ==========
-const DEV_MODE = true // Cambiar a false para usar autenticación real
-
-const MOCK_USER = {
-  id: 1,
-  name: 'Administrador',
-  email: 'admin@singula.com',
-  role: 'Admin',
-  username: 'admin',
-}
-
-// Token JWT mock válido (estructura real pero datos ficticios)
-const MOCK_TOKEN =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwibmFtZSI6IkFkbWluaXN0cmFkb3IiLCJlbWFpbCI6ImFkbWluQHNpbmd1bGEuY29tIiwicm9sZSI6IkFkbWluIiwiZXhwIjoxNzY0NTAwMDAwfQ.mock_signature_for_dev'
-// =============================================
+import * as authService from 'src/services/authService'
 
 export const useAuthStore = defineStore('auth', () => {
   // Estado reactivo
@@ -33,6 +16,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
   const token = ref(localStorage.getItem('token') || null)
   const user = ref(null)
+  const loading = ref(false)
 
   // Inicializar user desde localStorage si existe
   try {
@@ -47,120 +31,145 @@ export const useAuthStore = defineStore('auth', () => {
 
   // Computados
   const isAuthenticated = computed(() => !!token.value)
-  const userName = computed(() => user.value?.name || 'Usuario')
+  const userName = computed(() => {
+    if (user.value?.nombreCompleto) return user.value.nombreCompleto
+    if (user.value?.nombres && user.value?.apellidos) return `${user.value.nombres} ${user.value.apellidos}`
+    if (user.value?.username) return user.value.username
+    return 'Usuario'
+  })
+  const userEmail = computed(() => user.value?.correo || '')
+  const userRole = computed(() => user.value?.rol || 'user')
 
   // Acciones
   async function login(credentials) {
-    // ========== MODO DESARROLLO - MOCK LOGIN ==========
-    if (DEV_MODE) {
-      console.log('🔓 [DEV MODE] Login mock activado')
-      // Simular delay de red
-      await new Promise((resolve) => setTimeout(resolve, 500))
-
-      // Aceptar cualquier credencial en modo dev
-      setToken(MOCK_TOKEN)
-      setUser(MOCK_USER)
-
-      console.log('✅ [DEV MODE] Usuario autenticado:', MOCK_USER.name)
-      return { token: MOCK_TOKEN, user: MOCK_USER }
-    }
-    // ==================================================
-
-    // credentials: { username, password, rememberMe }
-    const payload = {
-      Username: credentials.username,
-      Password: credentials.password,
-    }
-
+    loading.value = true
     try {
-      const resp = await apiClient.post('/usuarios/authenticate', payload)
-      const serverToken = resp.data?.token
-      if (!serverToken) throw new Error('No se recibió token del servidor')
-
-      // Guardar token en store y localStorage
-      setToken(serverToken)
-
-      // Intentar decodificar JWT para obtener datos del usuario
-      let parsedUser = null
-      try {
-        const parts = serverToken.split('.')
-        if (parts.length === 3) {
-          const payloadJson = atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'))
-          const claims = JSON.parse(payloadJson)
-
-          console.log('JWT Claims decodificados:', claims)
-
-          // Intentar extraer ID de múltiples posibles ubicaciones
-          const possibleIds = [
-            claims.UserId,
-            claims.userId,
-            claims.sub,
-            claims.User_Id,
-            claims['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'],
-          ]
-
-          const extractedId = possibleIds.find((id) => id != null && id !== undefined)
-          const parsedId = extractedId ? parseInt(extractedId, 10) : null
-
-          console.log('ID extraído del JWT:', parsedId)
-
-          parsedUser = {
-            id: parsedId,
-            name:
-              claims.name ||
-              claims['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'] ||
-              claims.unique_name ||
-              null,
-            email:
-              claims.email ||
-              claims['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] ||
-              null,
-            role:
-              claims.role ||
-              claims['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] ||
-              null,
-          }
-        }
-      } catch (err) {
-        console.warn('No se pudo decodificar JWT para extraer usuario:', err)
+      // Asegurar que las credenciales tengan el formato correcto
+      const email = credentials.correo || credentials.email
+      const password = credentials.password
+      
+      if (!email || !password) {
+        throw new Error('Correo y contraseña son requeridos')
       }
 
-      // Si obtuvimos id, solicitar al backend el usuario completo
-      if (parsedUser?.id) {
-        try {
-          const userResp = await apiClient.get(`/usuarios/${parsedUser.id}`)
-          setUser(userResp.data)
-          return { token: serverToken, user: userResp.data }
-        } catch (fetchErr) {
-          console.warn('No se pudo obtener usuario por id:', fetchErr)
-          // si falla, conservar los datos parseados
-          setUser(parsedUser)
-          return { token: serverToken, user: parsedUser }
-        }
+      const result = await authService.login(email, password)
+      token.value = result.token
+      user.value = result.user
+      localStorage.setItem('token', result.token)
+      localStorage.setItem('user', JSON.stringify(result.user))
+      return result
+    } catch (error) {
+      // No hacer logout automático en errores de credenciales
+      if (error.status !== 401) {
+        logout()
       }
-
-      // Si no hay id, simplemente guardar lo parseado (o request adicional si hace falta)
-      if (parsedUser) setUser(parsedUser)
-
-      return { token: serverToken, user: parsedUser }
-    } catch (err) {
-      // Propagar mensaje amigable
-      const message = err.response?.data?.message || err.message || 'Error al autenticar'
-      throw new Error(message)
+      throw error
+    } finally {
+      loading.value = false
     }
   }
 
-  function logout() {
-    token.value = null
-    user.value = null
+  async function register(userData) {
+    loading.value = true
+    try {
+      const result = await authService.register(userData)
+      token.value = result.token
+      user.value = result.user
+      localStorage.setItem('token', result.token)
+      localStorage.setItem('user', JSON.stringify(result.user))
+      return result
+    } catch (error) {
+      logout()
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
 
-    // Limpiar localStorage
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
+  async function logout() {
+    loading.value = true
+    try {
+      await authService.logout()
+      token.value = null
+      user.value = null
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+    } finally {
+      loading.value = false
+    }
+  }
 
-    // Resetear estado de reportes al cerrar sesión
-    const slaStore = useSlaStore()
-    slaStore.resetReportsInitialization()
+  async function getCurrentUser() {
+    loading.value = true
+    try {
+      const result = await authService.getCurrentUser()
+      user.value = result
+      localStorage.setItem('user', JSON.stringify(result))
+      return result
+    } catch (error) {
+      console.error('Error getting current user:', error)
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function updateUserProfile(userData) {
+    loading.value = true
+    try {
+      console.log('📝 Actualizando perfil en BD:', userData)
+      const result = await authService.updateProfile(userData)
+      console.log('✅ Perfil actualizado en BD:', result)
+      
+      // Actualizar el user completo manteniendo los datos existentes
+      user.value = { 
+        ...user.value, 
+        ...result,
+        nombres: userData.nombres,
+        apellidos: userData.apellidos,
+        correo: userData.correo,
+        documento: userData.documento,
+        nombreCompleto: `${userData.nombres || ''} ${userData.apellidos || ''}`.trim()
+      }
+      localStorage.setItem('user', JSON.stringify(user.value))
+      console.log('💾 Usuario actualizado en localStorage:', user.value)
+      return result
+    } catch (error) {
+      console.error('❌ Error updating profile:', error)
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function changeUserPassword(currentPassword, newPassword, confirmPassword) {
+    loading.value = true
+    try {
+      console.log('🔐 Cambiando contraseña en BD...')
+      const result = await authService.changePassword(currentPassword, newPassword, confirmPassword)
+      console.log('✅ Contraseña actualizada en BD')
+      return result
+    } catch (error) {
+      console.error('❌ Error changing password:', error)
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function loadUserProfile() {
+    loading.value = true
+    try {
+      const result = await authService.getCurrentUser()
+      user.value = result
+      localStorage.setItem('user', JSON.stringify(result))
+      return result
+    } catch (error) {
+      console.error('Error loading profile:', error)
+      throw error
+    } finally {
+      loading.value = false
+    }
   }
 
   function setToken(newToken) {
@@ -177,14 +186,22 @@ export const useAuthStore = defineStore('auth', () => {
     // Estado
     token,
     user,
+    loading,
 
     // Computados
     isAuthenticated,
     userName,
+    userEmail,
+    userRole,
 
     // Acciones
     login,
+    register,
     logout,
+    getCurrentUser,
+    updateUserProfile,
+    changeUserPassword,
+    loadUserProfile,
     setToken,
     setUser,
   }

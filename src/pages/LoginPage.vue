@@ -2,9 +2,21 @@
   <q-layout view="lHh Lpr lFf">
     <q-page-container>
       <q-page
-        class="flex flex-center"
-        style="background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%)"
+        class="flex flex-center login-page"
       >
+        <!-- Animación de burbujas -->
+        <div class="bubbles">
+          <div class="bubble"></div>
+          <div class="bubble"></div>
+          <div class="bubble"></div>
+          <div class="bubble"></div>
+          <div class="bubble"></div>
+          <div class="bubble"></div>
+          <div class="bubble"></div>
+          <div class="bubble"></div>
+          <div class="bubble"></div>
+          <div class="bubble"></div>
+        </div>
         <div class="login-container">
           <q-card class="login-card" flat bordered>
             <!-- Logo y Header -->
@@ -24,22 +36,18 @@
             <!-- Formulario de Login -->
             <q-card-section class="q-px-xl q-pb-xl">
               <q-form @submit="handleLogin" class="q-gapx-md">
-                <div class="text-h6 text-weight-medium text-black q-mb-md">
-                  <q-icon name="login" class="q-mr-sm" />
-                  Iniciar Sesión
-                </div>
 
                 <q-input
-                  v-model="loginForm.username"
+                  v-model="loginForm.email"
                   filled
-                  label="Usuario"
-                  type="text"
+                  label="Correo Electrónico"
+                  type="email"
                   bg-color="white"
                   class="q-mb-md"
-                  :rules="[(val) => !!val || 'Usuario requerido']"
+                  :rules="[(val) => !!val || 'Correo requerido', (val) => /.+@.+\..+/.test(val) || 'Correo no válido']"
                 >
                   <template v-slot:prepend>
-                    <q-icon name="person" color="black" />
+                    <q-icon name="email" color="black" />
                   </template>
                 </q-input>
 
@@ -64,10 +72,6 @@
                   </template>
                 </q-input>
 
-                <div class="row items-center q-mb-lg">
-                  <q-checkbox v-model="loginForm.rememberMe" label="Recordarme" color="black" />
-                </div>
-
                 <q-btn
                   type="submit"
                   color="black"
@@ -78,10 +82,6 @@
                   class="full-width"
                   :loading="loading"
                 />
-
-                <div class="text-center q-mt-md">
-                  <q-btn flat dense color="grey-8" label="¿Olvidaste tu contraseña?" size="sm" />
-                </div>
               </q-form>
             </q-card-section>
 
@@ -109,9 +109,8 @@ const $q = useQuasar()
 const authStore = useAuthStore()
 
 const loginForm = ref({
-  username: '',
+  email: '',
   password: '',
-  rememberMe: false,
 })
 
 const showPassword = ref(false)
@@ -121,22 +120,22 @@ async function handleLogin() {
   loading.value = true
 
   try {
-    // Simular delay de red
-    await new Promise((resolve) => setTimeout(resolve, 800))
+    // Crear objeto de credenciales con el formato correcto
+    const credentials = {
+      correo: loginForm.value.email,     // mapear email a correo
+      password: loginForm.value.password
+    }
 
-    // Llamar al backend para autenticar
-    await authStore.login({
-      username: loginForm.value.username,
-      password: loginForm.value.password,
-      rememberMe: loginForm.value.rememberMe,
-    })
+    // Llamar al authStore con las credenciales
+    const result = await authStore.login(credentials)
 
     $q.notify({
       type: 'positive',
-      message: '¡Bienvenido a SINGULA!',
-      caption: 'Inicio de sesión exitoso',
-      position: 'top',
+      message: '¡Inicio de sesión exitoso!',
+      caption: `Bienvenido ${result.user?.nombre || 'Usuario'}`,
+      position: 'center',
       icon: 'check_circle',
+      timeout: 500
     })
 
     // Redirigir al dashboard
@@ -144,11 +143,13 @@ async function handleLogin() {
   } catch (error) {
     $q.notify({
       type: 'negative',
-      message: 'Error al iniciar sesión',
-      caption: error.message || 'Credenciales inválidas',
-      position: 'top',
+      message: 'Credenciales incorrectas',
+      caption: 'Por favor verifica tu correo y contraseña e inténtalo de nuevo',
+      position: 'center',
       icon: 'error',
+      timeout: 1000
     })
+    console.error('Error en login:', error)
   } finally {
     loading.value = false
   }
@@ -156,15 +157,144 @@ async function handleLogin() {
 </script>
 
 <style scoped lang="scss">
+.login-page {
+  background: #000000;
+  position: relative;
+  overflow: hidden;
+}
+
 .login-container {
   width: 100%;
   max-width: 480px;
   padding: 20px;
+  position: relative;
+  z-index: 10;
 }
 
 .login-card {
   border-radius: 12px;
   border: 2px solid #e0e0e0;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 10px 40px rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+}
+
+// Animaciones de burbujas
+.bubbles {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.bubble {
+  position: absolute;
+  bottom: -100px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  animation: rise 10s infinite ease-in;
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+}
+
+.bubble:nth-child(1) {
+  width: 40px;
+  height: 40px;
+  left: 10%;
+  animation-duration: 8s;
+  animation-delay: 0s;
+}
+
+.bubble:nth-child(2) {
+  width: 20px;
+  height: 20px;
+  left: 20%;
+  animation-duration: 5s;
+  animation-delay: 1s;
+}
+
+.bubble:nth-child(3) {
+  width: 50px;
+  height: 50px;
+  left: 35%;
+  animation-duration: 7s;
+  animation-delay: 2s;
+}
+
+.bubble:nth-child(4) {
+  width: 80px;
+  height: 80px;
+  left: 50%;
+  animation-duration: 11s;
+  animation-delay: 0s;
+}
+
+.bubble:nth-child(5) {
+  width: 35px;
+  height: 35px;
+  left: 55%;
+  animation-duration: 6s;
+  animation-delay: 1s;
+}
+
+.bubble:nth-child(6) {
+  width: 45px;
+  height: 45px;
+  left: 65%;
+  animation-duration: 8s;
+  animation-delay: 3s;
+}
+
+.bubble:nth-child(7) {
+  width: 90px;
+  height: 90px;
+  left: 70%;
+  animation-duration: 12s;
+  animation-delay: 2s;
+}
+
+.bubble:nth-child(8) {
+  width: 25px;
+  height: 25px;
+  left: 80%;
+  animation-duration: 6s;
+  animation-delay: 2s;
+}
+
+.bubble:nth-child(9) {
+  width: 15px;
+  height: 15px;
+  left: 85%;
+  animation-duration: 5s;
+  animation-delay: 1s;
+}
+
+.bubble:nth-child(10) {
+  width: 60px;
+  height: 60px;
+  left: 90%;
+  animation-duration: 9s;
+  animation-delay: 0s;
+}
+
+@keyframes rise {
+  0% {
+    bottom: -100px;
+    transform: translateX(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    bottom: 100vh;
+    transform: translateX(-200px);
+    opacity: 0;
+  }
 }
 </style>

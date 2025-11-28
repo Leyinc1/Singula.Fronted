@@ -6,7 +6,7 @@ import {
   createWebHashHistory,
 } from 'vue-router'
 import routes from './routes'
-// import { useAuthStore } from 'src/stores/authStore'
+import { useAuthStore } from 'src/stores/authStore'
 
 /*
  * If not building with SSR mode, you can
@@ -36,18 +36,39 @@ export default defineRouter(function (/* { store, ssrContext } */) {
 
   // Protección de rutas
   Router.beforeEach((to, from, next) => {
-    // const authStore = useAuthStore()
-    // const requiresAuth = to.matched.some((record) => record.meta.requiresAuth)
+    const authStore = useAuthStore()
+    const requiresAuth = to.matched.some((record) => record.meta.requiresAuth)
+    const requiresAdmin = to.matched.some((record) => record.meta.requiresAdmin)
 
-    // if (requiresAuth && !authStore.isAuthenticated) {
-    //   // Redirigir a login si la ruta requiere autenticación
-    //   next('/login')
-    // } else if (to.path === '/login' && authStore.isAuthenticated) {
-    //   // Si ya está autenticado y va a login, redirigir al dashboard
-    //   next('/')
-    // } else {
+    // Rutas públicas
+    const publicRoutes = ['/login', '/register']
+    if (publicRoutes.includes(to.path)) {
+      // Si ya está autenticado y va a login/register, redirigir al dashboard
+      if (authStore.isAuthenticated) {
+        next('/')
+      } else {
+        next()
+      }
+      return
+    }
+
+    // Si requiere autenticación
+    if (requiresAuth) {
+      if (!authStore.isAuthenticated) {
+        // Redirigir a login si no está autenticado
+        next('/login')
+        return
+      }
+
+      // Si requiere admin
+      if (requiresAdmin && authStore.userRole !== 'admin') {
+        // Redirigir al dashboard si no es admin
+        next('/')
+        return
+      }
+    }
+
     next()
-    // }
   })
 
   return Router
