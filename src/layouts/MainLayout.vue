@@ -102,7 +102,6 @@ const notificationStore = useNotificationStore()
 const leftDrawerOpen = ref(false)
 
 const userName = computed(() => authStore.userName)
-const isAdmin = computed(() => authStore.user?.role === 'admin')
 
 // --- VARIABLES DEL STORE ---
 const unreadCount = computed(() => notificationStore.totalUnread)
@@ -134,16 +133,13 @@ const menuLinks = computed(() => {
       link: '/notifications',
     },
     { title: 'Reportes', caption: 'Generar reportes PDF', icon: 'assessment', link: '/reports' },
-  ]
-
-  if (isAdmin.value) {
-    links.push({
+    {
       title: 'Configuración',
-      caption: 'Gestionar bloques y opciones',
+      caption: 'Áreas, prioridades y tipos de SLA',
       icon: 'settings',
       link: '/config',
-    })
-  }
+    },
+  ]
 
   return links
 })
