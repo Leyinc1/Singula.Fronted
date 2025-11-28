@@ -39,7 +39,7 @@ export const slaService = {
       const formData = new FormData()
       formData.append('file', file)
 
-      const response = await apiClient.post('/sla/upload', formData, {
+      const response = await apiClient.post('/api/sla/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -59,7 +59,7 @@ export const slaService = {
    */
   async createManualEntry(solicitud) {
     try {
-      const response = await apiClient.post('/solicitud', solicitud)
+      const response = await apiClient.post('/api/sla/manual', solicitud)
       return response.data
     } catch (error) {
       console.error('Error al crear solicitud manual:', error)

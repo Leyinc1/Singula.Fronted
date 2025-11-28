@@ -1,193 +1,193 @@
-/**
- * Store de Pinia para gestionar la configuración del sistema
- * Maneja: bloques tecnológicos, prioridades, tipos de solicitud, etc.
- * Este store centraliza toda la configuración escalable del sistema
- */
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 
+/**
+ * Store de configuración y utilidades relacionadas con alertas.
+ * - Gestiona: bloques tech (desde backend), prioridades (local), tipos de solicitud y estados (desde backend).
+ * - Expone métodos para consultar y operar alertas en el backend.
+ *
+ * Nota: la gestión del token se hace en otra rama. Aquí se acepta un tokenProvider opcional.
+ * Para Vite use VITE_API_BASE_URL en .env; si no existe, pasar baseUrl al init.
+ */
 export const useConfigStore = defineStore('config', () => {
-  // ============================================
-  // CONFIGURACIÓN DE BLOQUES TECNOLÓGICOS
-  // ============================================
-  const bloques = ref([
-    {
-      id: 'backend',
-      nombre: 'Backend',
-      descripcion: 'Desarrollo de servicios y APIs',
-      departamento: 'Tech',
-      color: '#0066cc',
-      icon: 'dns',
-      activo: true,
-    },
-    {
-      id: 'frontend',
-      nombre: 'Frontend',
-      descripcion: 'Desarrollo de interfaces de usuario',
-      departamento: 'Tech',
-      color: '#ff6600',
-      icon: 'web',
-      activo: true,
-    },
-    {
-      id: 'qa',
-      nombre: 'QA',
-      descripcion: 'Aseguramiento de calidad y testing',
-      departamento: 'Tech',
-      color: '#4caf50',
-      icon: 'bug_report',
-      activo: true,
-    },
-    {
-      id: 'mobile',
-      nombre: 'Mobile',
-      descripcion: 'Desarrollo de aplicaciones móviles',
-      departamento: 'Tech',
-      color: '#9c27b0',
-      icon: 'smartphone',
-      activo: true,
-    },
-    {
-      id: 'devops',
-      nombre: 'DevOps',
-      descripcion: 'Infraestructura y despliegue',
-      departamento: 'Tech',
-      color: '#ff9800',
-      icon: 'cloud',
-      activo: true,
-    },
-    {
-      id: 'data',
-      nombre: 'Data',
-      descripcion: 'Ciencia de datos y análisis',
-      departamento: 'Tech',
-      color: '#00bcd4',
-      icon: 'analytics',
-      activo: true,
-    },
-  ])
+  // Base URL y proveedor de token (inicializar con init)
+  let _baseUrl = import.meta.env.VITE_API_BASE_URL || ''
+  let _tokenProvider = null // () => string | null
+
+  function init(options = {}) {
+    if (options.baseUrl) _baseUrl = options.baseUrl
+    if (options.tokenProvider) _tokenProvider = options.tokenProvider
+  }
+
+  function _headers() {
+    const headers = { 'Content-Type': 'application/json' }
+    try {
+      const token = _tokenProvider?.()
+      if (token) headers['Authorization'] = `Bearer ${token}`
+    } catch {
+      // tokenProvider puede lanzar si no está lista; ignorar
+    }
+    return headers
+  }
+
+  async function _fetch(path, opts = {}) {
+    const url = (_baseUrl || '').replace(/\/+$/, '') + '/' + path.replace(/^\/+/, '')
+    const options = {
+      headers: { ...(opts.headers || {}), ..._headers() },
+      ...opts,
+    }
+    const res = await fetch(url, options)
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      const err = new Error(`HTTP ${res.status} ${res.statusText} ${text}`)
+      err.status = res.status
+      throw err
+    }
+    // no content
+    if (res.status === 204) return null
+    return res.json().catch(() => null)
+  }
+
+  // Estado reactivo
+  const bloques = ref([]) // { id, nombre, descripcion, departamento, icon, color, activo }
+  const prioridades = ref([]) // { nombre, nivel, icon, color, slaMultiplier }
+  const tiposSolicitud = ref([]) // { id, nombre, descripcion, sla? }
+  const estados = ref([]) // { id, codigo, nombre, descripcion, icon?, color? }
 
   // ============================================
-  // CONFIGURACIÓN DE PRIORIDADES
+  // FETCHERS (backend)
   // ============================================
-  const prioridades = ref([
-    {
-      id: 'critica',
-      nombre: 'Crítica',
-      descripcion: 'Requiere atención inmediata',
-      color: '#d32f2f',
-      icon: 'emergency',
-      nivel: 4,
-      slaMultiplier: 0.5, // Reduce el SLA a la mitad
-    },
-    {
-      id: 'alta',
-      nombre: 'Alta',
-      descripcion: 'Alta prioridad',
-      color: '#f57c00',
-      icon: 'priority_high',
-      nivel: 3,
-      slaMultiplier: 0.75,
-    },
-    {
-      id: 'media',
-      nombre: 'Media',
-      descripcion: 'Prioridad normal',
-      color: '#1976d2',
-      icon: 'remove',
-      nivel: 2,
-      slaMultiplier: 1.0,
-    },
-    {
-      id: 'baja',
-      nombre: 'Baja',
-      descripcion: 'Puede esperar',
-      color: '#388e3c',
-      icon: 'arrow_downward',
-      nivel: 1,
-      slaMultiplier: 1.5, // Aumenta el SLA en 50%
-    },
-  ])
+  async function fetchBloquesTech() {
+    // Endpoint: GET /api/RolRegistro
+    try {
+      const data = await _fetch('api/RolRegistro', { method: 'GET' })
+      // Mapear a forma del frontend
+      bloques.value = (data || []).map((r) => ({
+        id: r.idRolRegistro ?? r.id,
+        nombre: r.nombreRol ?? r.nombre,
+        descripcion: r.descripcion ?? '',
+        departamento: r.bloqueTech ?? 'General',
+        icon: r.icon ?? null,
+        color: r.color ?? null,
+        activo: r.esActivo ?? true,
+      }))
+      return bloques.value
+    } catch (error) {
+      // Si falla (401 sin autenticación), dejar vacío pero no fallar
+      console.warn('No se pudieron cargar bloques tecnológicos:', error.message)
+      return []
+    }
+  }
+
+  async function fetchTiposSolicitud() {
+    // Endpoint: GET /api/TipoSolicitudCatalogo
+    try {
+      const data = await _fetch('api/TipoSolicitudCatalogo', { method: 'GET' })
+      tiposSolicitud.value = (data || []).map((t) => ({
+        id: t.idTipoSolicitud ?? t.id,
+        nombre: t.codigo ?? t.descripcion ?? 'Sin nombre',
+        descripcion: t.descripcion ?? '',
+        sla: t.sla ?? null, // si el backend expone SLA en otro endpoint, enriquecer después
+      }))
+      return tiposSolicitud.value
+    } catch (error) {
+      // Si falla (401 sin autenticación), dejar vacío pero no fallar
+      console.warn('No se pudieron cargar tipos de solicitud:', error.message)
+      return []
+    }
+  }
+
+  async function fetchEstados() {
+    // Endpoint: GET /api/EstadoSolicitudCatalogo
+    try {
+      const data = await _fetch('api/EstadoSolicitudCatalogo', { method: 'GET' })
+      estados.value = (data || []).map((e) => ({
+        id: e.idEstadoSolicitud ?? e.id,
+        codigo: e.codigo ?? '',
+        nombre: e.descripcion ?? e.codigo ?? 'Estado',
+        descripcion: e.descripcion ?? '',
+        icon: e.icon ?? null,
+        color: e.color ?? null,
+      }))
+      return estados.value
+    } catch (error) {
+      // Si falla (401 sin autenticación), dejar vacío pero no fallar
+      console.warn('No se pudieron cargar estados:', error.message)
+      return []
+    }
+  }
+
+  async function fetchAllConfig() {
+    // Obtener datos del backend
+    // Nota: Requiere autenticación. Los endpoints deben ser públicos o tener un token válido
+    await Promise.allSettled([fetchBloquesTech(), fetchTiposSolicitud(), fetchEstados()])
+
+    return {
+      bloques: bloques.value,
+      prioridades: prioridades.value,
+      tiposSolicitud: tiposSolicitud.value,
+      estados: estados.value,
+    }
+  }
 
   // ============================================
-  // CONFIGURACIÓN DE TIPOS DE SOLICITUD
+  // ALERT API (endpoints para Android/Frontend)
   // ============================================
-  const tiposSolicitud = ref([
-    {
-      id: 'nuevo_personal',
-      nombre: 'Nuevo Personal',
-      descripcion: 'Contratación de nuevo personal',
-      sla: 35, // días
-      icon: 'person_add',
-      color: '#1976d2',
-    },
-    {
-      id: 'reemplazo',
-      nombre: 'Reemplazo',
-      descripcion: 'Reemplazo de personal existente',
-      sla: 20, // días
-      icon: 'swap_horiz',
-      color: '#388e3c',
-    },
-  ])
+  // GET /api/alertum/user/{userId}?onlyUnread=&page=&pageSize=
+  async function fetchAlertsForUser(userId, { onlyUnread = false, page = 1, pageSize = 20 } = {}) {
+    const qs = new URLSearchParams({
+      onlyUnread: String(onlyUnread),
+      page: String(page),
+      pageSize: String(pageSize),
+    })
+    const data = await _fetch(`api/alertum/user/${userId}?${qs.toString()}`, { method: 'GET' })
+    return data || []
+  }
+
+  // GET /api/alertum/user/{userId}/unread/count
+  async function fetchUnreadCount(userId) {
+    const data = await _fetch(`api/alertum/user/${userId}/unread/count`, { method: 'GET' })
+    return data?.Unread ?? 0
+  }
+
+  // POST /api/alertum/{id}/mark-read?userId=
+  async function markAlertAsRead(alertId, userId) {
+    await _fetch(`api/alertum/${alertId}/mark-read?userId=${encodeURIComponent(userId)}`, {
+      method: 'POST',
+    })
+    return true
+  }
+
+  // POST /api/alertum  (crear alerta)
+  async function createAlert(payload) {
+    // payload debe seguir AlertumDto (idSolicitud, idTipoAlerta, idEstadoAlerta, nivel, mensaje, enviadoEmail)
+    const created = await _fetch('api/alertum', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+    return created
+  }
 
   // ============================================
-  // CONFIGURACIÓN DE ESTADOS
+  // COMPUTED y UTILIDADES
   // ============================================
-  const estados = ref([
-    {
-      id: 'pendiente',
-      nombre: 'Pendiente',
-      color: '#9e9e9e',
-      icon: 'schedule',
-    },
-    {
-      id: 'en_proceso',
-      nombre: 'En Proceso',
-      color: '#2196f3',
-      icon: 'autorenew',
-    },
-    {
-      id: 'completado',
-      nombre: 'Completado',
-      color: '#4caf50',
-      icon: 'check_circle',
-    },
-    {
-      id: 'rechazado',
-      nombre: 'Rechazado',
-      color: '#f44336',
-      icon: 'cancel',
-    },
-  ])
-
-  // ============================================
-  // COMPUTADOS
-  // ============================================
-
-  // Departamentos únicos
   const departamentos = computed(() => {
-    const deps = [...new Set(bloques.value.map((b) => b.departamento))]
+    const deps = [...new Set(bloques.value.map((b) => b.departamento || 'General'))]
     return deps.sort()
   })
 
-  // Bloques activos
   const bloquesActivos = computed(() => bloques.value.filter((b) => b.activo))
 
-  // Bloques por departamento
   const bloquesPorDepartamento = computed(() => {
     const grouped = {}
     bloquesActivos.value.forEach((bloque) => {
-      const dep = bloque.departamento
-      if (!grouped[dep]) {
-        grouped[dep] = []
-      }
+      const dep = bloque.departamento || 'General'
+      if (!grouped[dep]) grouped[dep] = []
       grouped[dep].push(bloque)
     })
     return grouped
   })
 
-  // Opciones para selects
   const bloquesOptions = computed(() =>
     bloquesActivos.value.map((b) => ({
       label: b.nombre,
@@ -195,6 +195,7 @@ export const useConfigStore = defineStore('config', () => {
       icon: b.icon,
       color: b.color,
       departamento: b.departamento,
+      id: b.id,
     })),
   )
 
@@ -211,7 +212,7 @@ export const useConfigStore = defineStore('config', () => {
     tiposSolicitud.value.map((t) => ({
       label: t.nombre,
       value: t.nombre,
-      icon: t.icon,
+      id: t.id,
     })),
   )
 
@@ -225,9 +226,8 @@ export const useConfigStore = defineStore('config', () => {
   )
 
   // ============================================
-  // MÉTODOS DE BÚSQUEDA
+  // Búsquedas y utilidades
   // ============================================
-
   function getBloqueByNombre(nombre) {
     return bloques.value.find((b) => b.nombre === nombre)
   }
@@ -244,13 +244,10 @@ export const useConfigStore = defineStore('config', () => {
     return estados.value.find((e) => e.id === id)
   }
 
-  // ============================================
-  // MÉTODOS DE GESTIÓN (para futuro panel admin)
-  // ============================================
-
+  // Gestión de arrays en runtime (UI / admin)
   function agregarBloque(bloque) {
     bloques.value.push({
-      id: bloque.id || bloque.nombre.toLowerCase().replace(/\s+/g, '_'),
+      id: bloque.id || (bloque.nombre || '').toLowerCase().replace(/\s+/g, '_'),
       ...bloque,
       activo: true,
     })
@@ -258,55 +255,48 @@ export const useConfigStore = defineStore('config', () => {
 
   function actualizarBloque(id, datos) {
     const index = bloques.value.findIndex((b) => b.id === id)
-    if (index !== -1) {
-      bloques.value[index] = { ...bloques.value[index], ...datos }
-    }
+    if (index !== -1) bloques.value[index] = { ...bloques.value[index], ...datos }
   }
 
   function toggleBloqueActivo(id) {
     const bloque = bloques.value.find((b) => b.id === id)
-    if (bloque) {
-      bloque.activo = !bloque.activo
-    }
+    if (bloque) bloque.activo = !bloque.activo
   }
 
   function agregarPrioridad(prioridad) {
     prioridades.value.push(prioridad)
-    // Ordenar por nivel
     prioridades.value.sort((a, b) => b.nivel - a.nivel)
   }
 
   function agregarTipoSolicitud(tipo) {
     tiposSolicitud.value.push({
-      id: tipo.id || tipo.nombre.toLowerCase().replace(/\s+/g, '_'),
+      id: tipo.id || (tipo.nombre || '').toLowerCase().replace(/\s+/g, '_'),
       ...tipo,
     })
   }
 
-  // ============================================
   // CONFIGURACIÓN DE SLA
-  // ============================================
-
   function calcularSLA(tipoSolicitud, prioridad) {
     const tipo = getTipoSolicitudByNombre(tipoSolicitud)
     const prio = getPrioridadByNombre(prioridad)
-
     if (!tipo) return null
-
-    const slaBase = tipo.sla
-    const multiplier = prio?.slaMultiplier || 1.0
-
+    const slaBase = tipo.sla ?? 0
+    const multiplier = prio?.slaMultiplier ?? 1.0
     return Math.round(slaBase * multiplier)
   }
 
+  // Export
   return {
-    // Estado
+    // init
+    init,
+
+    // estado
     bloques,
     prioridades,
     tiposSolicitud,
     estados,
 
-    // Computados
+    // computed
     departamentos,
     bloquesActivos,
     bloquesPorDepartamento,
@@ -315,20 +305,30 @@ export const useConfigStore = defineStore('config', () => {
     tiposSolicitudOptions,
     estadosOptions,
 
-    // Métodos de búsqueda
+    // fetchers
+    fetchBloquesTech,
+    fetchTiposSolicitud,
+    fetchEstados,
+    fetchAllConfig,
+
+    // alert API
+    fetchAlertsForUser,
+    fetchUnreadCount,
+    markAlertAsRead,
+    createAlert,
+
+    // búsquedas y gestión
     getBloqueByNombre,
     getPrioridadByNombre,
     getTipoSolicitudByNombre,
     getEstadoById,
-
-    // Métodos de gestión
     agregarBloque,
     actualizarBloque,
     toggleBloqueActivo,
     agregarPrioridad,
     agregarTipoSolicitud,
 
-    // Utilidades
+    // util
     calcularSLA,
   }
 })
