@@ -197,7 +197,7 @@ export const useSlaStore = defineStore('sla', () => {
 
     Object.keys(kpis).forEach(tipo => {
       const kpi = kpis[tipo]
-      kpi.porcentaje = kpi.total > 0 ? ((kpi.cumplidos / kpi.total) * 100).toFixed(2) : 0
+      kpi.porcentaje = kpi.total > 0 ? parseFloat(((kpi.cumplidos / kpi.total) * 100).toFixed(2)) : 0
     })
 
     return kpis
@@ -216,7 +216,7 @@ export const useSlaStore = defineStore('sla', () => {
       )
     }).length
 
-    return ((cumplidas / totalSolicitudes) * 100).toFixed(2)
+    return parseFloat(((cumplidas / totalSolicitudes) * 100).toFixed(2))
   })
 
   // --- GRÁFICOS ---
@@ -246,20 +246,16 @@ export const useSlaStore = defineStore('sla', () => {
     })
 
     return Object.values(grouped).map((item) => {
-      const slaPercentages = {}
+      const result = { role: item.role }
+
+      // Agregar porcentajes directamente como propiedades (para el gráfico)
       Object.keys(item.totals).forEach((tipo) => {
         const total = item.totals[tipo] || 0
         const cumpl = item.cumplidos[tipo] || 0
-        slaPercentages[tipo] = total > 0 ? ((cumpl / total) * 100).toFixed(2) : 0
+        result[tipo] = total > 0 ? ((cumpl / total) * 100).toFixed(2) : 0
       })
 
-      // Retornar formato enriquecido
-      return {
-        role: item.role,
-        slaPercentages,
-        // Compatibilidad con Master si algún componente lo necesita plano
-        ...slaPercentages
-      }
+      return result
     })
   })
 

@@ -188,7 +188,7 @@ export const useConfigStore = defineStore('config', () => {
               id: area.idArea,
               nombre: area.nombreArea,
               descripcion: area.descripcion || `Área ${area.nombreArea}`,
-              departamento: 'Tech',
+              departamento: area.nombreArea, // Usar el nombre del área como departamento
               color: '#' + Math.floor(Math.random() * 16777215).toString(16),
               icon: 'business',
               activo: area.activo !== undefined ? area.activo : true,
@@ -201,6 +201,7 @@ export const useConfigStore = defineStore('config', () => {
             existing.activo = area.activo !== undefined ? area.activo : true
             existing.backendId = area.idArea
             existing.id = area.idArea
+            existing.departamento = area.nombreArea // También actualizar departamento
           }
         })
       }
@@ -311,24 +312,41 @@ export const useConfigStore = defineStore('config', () => {
   async function loadTiposSolicitudFromBackend() {
     loading.value = true
     try {
-      const response = await configService.getAllTiposSolicitud()
-      tiposSolicitudBackend.value = response.data
+      // Cargar tipos de solicitud
+      const tiposResponse = await configService.getAllTiposSolicitud()
+      tiposSolicitudBackend.value = tiposResponse.data
 
-      console.log('🔍 [loadTiposSolicitudFromBackend] Datos del backend:', response.data)
+      // Cargar configuraciones SLA
+      const slaResponse = await configService.getAllConfigSla()
+      const configSlas = slaResponse.data || []
+
+      console.log('🔍 [loadTiposSolicitudFromBackend] Tipos del backend:', tiposResponse.data)
+      console.log('🔍 [loadTiposSolicitudFromBackend] ConfigSlas del backend:', configSlas)
+
+      // Crear un mapa de idTipoSolicitud -> ConfigSla para búsqueda rápida
+      const slaMap = {}
+      configSlas.forEach(sla => {
+        slaMap[sla.idTipoSolicitud] = sla
+      })
 
       // Sincronizar con tipos locales
-      if (response.data && response.data.length > 0) {
+      if (tiposResponse.data && tiposResponse.data.length > 0) {
         // Crear un nuevo array para forzar reactividad de Vue
-        const nuevosTipos = response.data.map((tipo) => ({
-          id: tipo.idTipoSolicitud,
-          nombre: tipo.descripcion,
-          descripcion: tipo.descripcion || '',
-          sla: 30, // El backend no tiene diasSla, usar valor por defecto
-          icon: getIconForTipo(tipo.descripcion),
-          color: getColorForTipo(tipo.descripcion),
-          activo: tipo.activo !== undefined ? tipo.activo : true,
-          backendId: tipo.idTipoSolicitud,
-        }))
+        const nuevosTipos = tiposResponse.data.map((tipo) => {
+          const configSla = slaMap[tipo.idTipoSolicitud]
+
+          return {
+            id: tipo.idTipoSolicitud,
+            nombre: tipo.descripcion,
+            descripcion: configSla?.descripcion || tipo.descripcion || '',
+            sla: configSla?.diasUmbral || 30, // Usar diasUmbral de ConfigSla o valor por defecto
+            icon: getIconForTipo(tipo.descripcion),
+            color: getColorForTipo(tipo.descripcion),
+            activo: tipo.activo !== undefined ? tipo.activo : true,
+            backendId: tipo.idTipoSolicitud,
+            configSlaId: configSla?.idSla || null, // Guardar el ID del ConfigSla para edición
+          }
+        })
 
         // Reemplazar el array completo para asegurar reactividad
         tiposSolicitud.value = nuevosTipos

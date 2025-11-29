@@ -65,7 +65,7 @@
               <q-select
                 v-model="localFilters.area"
                 filled
-                label="ÁREAS"
+                label="Área"
                 :options="bloquesOptions"
                 multiple
                 use-chips

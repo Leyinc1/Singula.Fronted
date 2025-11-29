@@ -1154,7 +1154,26 @@ async function guardarTipoSolicitud() {
 
     if (modoEdicionTipo.value && tipoEnEdicion.value) {
       // Editar tipo existente en backend
-      await configStore.updateTipoSolicitudBackend(tipoEnEdicion.value, nuevoTipo.value)
+      // Para editar, necesitamos actualizar ConfigSla (que tiene los días de umbral)
+      // Buscar el configSla correspondiente al tipo en edición
+      const tipo = configStore.tiposSolicitud.find(t => t.id === tipoEnEdicion.value)
+
+      if (tipo && tipo.configSlaId) {
+        // Actualizar ConfigSla existente
+        await configStore.updateConfigSlaBackend(tipo.configSlaId, {
+          codigoSla: nuevoTipo.value.nombre.toUpperCase().replace(/\s+/g, '_'),
+          descripcion: nuevoTipo.value.descripcion || nuevoTipo.value.nombre,
+          idTipoSolicitud: tipo.backendId,
+          diasUmbral: nuevoTipo.value.sla,
+          esActivo: true
+        })
+      } else {
+        // Si no tiene configSla, solo actualizar el tipo de solicitud
+        await configStore.updateTipoSolicitudBackend(tipoEnEdicion.value, nuevoTipo.value)
+      }
+
+      // Recargar datos
+      await configStore.loadTiposSolicitudFromBackend()
 
       // Cerrar el diálogo primero
       cerrarDialogTipo()
@@ -1162,14 +1181,27 @@ async function guardarTipoSolicitud() {
       // Luego mostrar la notificación
       $q.notify({
         type: 'positive',
-        message: 'Tipo de solicitud actualizado exitosamente',
+        message: 'Tipo de SLA actualizado exitosamente',
         caption: nombreGuardado,
         position: 'top',
         icon: 'check_circle',
       })
     } else {
       // Agregar nuevo tipo al backend
-      await configStore.createTipoSolicitudBackend(nuevoTipo.value)
+      // 1. Primero crear el TipoSolicitudCatalogo
+      const tipoCreado = await configStore.createTipoSolicitudBackend(nuevoTipo.value)
+
+      // 2. Luego crear el ConfigSla con los días de umbral
+      await configStore.createConfigSlaBackend({
+        codigoSla: nuevoTipo.value.nombre.toUpperCase().replace(/\s+/g, '_'),
+        descripcion: nuevoTipo.value.descripcion || nuevoTipo.value.nombre,
+        idTipoSolicitud: tipoCreado.idTipoSolicitud,
+        diasUmbral: nuevoTipo.value.sla,
+        esActivo: true
+      })
+
+      // Recargar datos
+      await configStore.loadTiposSolicitudFromBackend()
 
       // Cerrar el diálogo primero
       cerrarDialogTipo()
@@ -1177,17 +1209,18 @@ async function guardarTipoSolicitud() {
       // Luego mostrar la notificación
       $q.notify({
         type: 'positive',
-        message: 'Tipo de solicitud agregado exitosamente',
+        message: 'Tipo de SLA agregado exitosamente',
         caption: nombreGuardado,
         position: 'top',
         icon: 'check_circle',
       })
     }
   } catch (error) {
+    console.error('Error al guardar tipo de SLA:', error)
     $q.notify({
       type: 'negative',
-      message: 'Error al guardar el tipo de solicitud',
-      caption: error.message || 'Intente nuevamente',
+      message: 'Error al guardar el tipo de SLA',
+      caption: error.response?.data?.message || error.message || 'Intente nuevamente',
       position: 'top',
       icon: 'error',
     })

@@ -98,8 +98,8 @@ const chartData = computed(() => {
   const tiposSet = new Set()
   props.data.forEach(item => {
     Object.keys(item).forEach(key => {
-      // Excluir campos que no son tipos de solicitud
-      if (key !== 'role' && key !== 'sla1Percentage' && key !== 'sla2Percentage' && item[key] !== undefined) {
+      // Excluir solo el campo 'role' - el resto son tipos de solicitud
+      if (key !== 'role' && item[key] !== undefined) {
         tiposSet.add(key)
       }
     })
