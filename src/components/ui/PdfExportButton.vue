@@ -19,7 +19,7 @@ import { ref } from 'vue'
 import { useQuasar } from 'quasar'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { api } from 'src/boot/axios'
+import reporteService from 'src/services/reporteService'
 // Importar logo SVG
 import logoSvgUrl from 'src/assets/tata-consultancy-services-logo-svg.svg'
 
@@ -59,38 +59,38 @@ async function generatePdf() {
     // 🖼️ CARGA DEL LOGO SVG
     // ============================================
     let logoData = null
-    
+
     try {
       // Cargar SVG y convertir a imagen
       const resp = await fetch(logoSvgUrl)
       const svgText = await resp.text()
-      
+
       // Crear imagen desde SVG
       const img = new Image()
       const svgBlob = new Blob([svgText], { type: 'image/svg+xml' })
       const svgUrl = URL.createObjectURL(svgBlob)
-      
+
       logoData = await new Promise((resolve, reject) => {
         img.onload = () => {
           const canvas = document.createElement('canvas')
           const ctx = canvas.getContext('2d')
-          
+
           // Aumentar resolución para mejor calidad
           const scale = 3 // Factor de escala para alta resolución
           canvas.width = img.width * scale
           canvas.height = img.height * scale
-          
+
           // Dibujar imagen con alta calidad
           ctx.imageSmoothingEnabled = true
           ctx.imageSmoothingQuality = 'high'
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-          
+
           // Recortar espacios en blanco (crop automático)
           const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
           const { data, width, height } = imageData
-          
+
           let top = height, bottom = 0, left = width, right = 0
-          
+
           // Encontrar límites del contenido (píxeles no blancos)
           for (let y = 0; y < height; y++) {
             for (let x = 0; x < width; x++) {
@@ -99,7 +99,7 @@ async function generatePdf() {
               const g = data[index + 1]
               const b = data[index + 2]
               const a = data[index + 3]
-              
+
               // Si no es blanco o transparente
               if (a > 10 && (r < 240 || g < 240 || b < 240)) {
                 if (y < top) top = y
@@ -109,29 +109,29 @@ async function generatePdf() {
               }
             }
           }
-          
+
           // Agregar un pequeño margen (5% del tamaño)
           const margin = Math.floor((right - left) * 0.05)
           top = Math.max(0, top - margin)
           bottom = Math.min(height - 1, bottom + margin)
           left = Math.max(0, left - margin)
           right = Math.min(width - 1, right + margin)
-          
+
           const croppedWidth = right - left + 1
           const croppedHeight = bottom - top + 1
-          
+
           // Crear canvas con imagen recortada
           const croppedCanvas = document.createElement('canvas')
           croppedCanvas.width = croppedWidth
           croppedCanvas.height = croppedHeight
           const croppedCtx = croppedCanvas.getContext('2d')
-          
+
           croppedCtx.drawImage(
             canvas,
             left, top, croppedWidth, croppedHeight,
             0, 0, croppedWidth, croppedHeight
           )
-          
+
           resolve(croppedCanvas.toDataURL('image/png'))
           URL.revokeObjectURL(svgUrl)
         }
@@ -172,7 +172,7 @@ async function generatePdf() {
     doc.setFontSize(10)
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(80, 80, 80)
-    
+
     // Mostrar período de filtros si existe
     if (props.filtros && props.filtros.startDate && props.filtros.endDate) {
       const formatDate = (dateStr) => {
@@ -185,7 +185,7 @@ async function generatePdf() {
       doc.text(`Período: ${formatDate(props.filtros.startDate)} al ${formatDate(props.filtros.endDate)}`, 14, currentY)
       currentY += 5
     }
-    
+
     const fecha = new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })
     doc.text(`Fecha de generación: ${fecha}`, 14, currentY)
     currentY += 10
@@ -225,7 +225,7 @@ async function generatePdf() {
       kpiEntries.forEach(([key, val]) => {
         // Usar la altura máxima calculada para todos los cards
         const cardHeight = maxCardHeight
-        
+
         // Dibujar card con borde
         doc.setDrawColor(200, 200, 200)
         doc.setFillColor(250, 250, 250)
@@ -235,11 +235,11 @@ async function generatePdf() {
         doc.setFontSize(7)
         doc.setFont('helvetica', 'normal')
         doc.setTextColor(100, 100, 100)
-        
+
         const maxWidth = cardWidth - 4
         const lines = doc.splitTextToSize(key, maxWidth)
         const startY = cardY + 4
-        
+
         lines.forEach((line, idx) => {
           doc.text(line, cardX + cardWidth / 2, startY + (idx * 2.5), { align: 'center' })
         })
@@ -248,7 +248,7 @@ async function generatePdf() {
         const valueY = startY + (lines.length * 2.5) + 6
         doc.setFontSize(16)
         doc.setFont('helvetica', 'bold')
-        
+
         // Color según el valor y tipo de KPI
         const numVal = parseFloat(val)
         if (!isNaN(numVal)) {
@@ -268,7 +268,7 @@ async function generatePdf() {
         } else {
           doc.setTextColor(0, 0, 0)
         }
-        
+
         // Formatear el valor correctamente
         let valueText = String(val)
         if (!isNaN(numVal)) {
@@ -282,7 +282,7 @@ async function generatePdf() {
             valueText = `${numVal}%`
           }
         }
-        
+
         doc.text(valueText, cardX + cardWidth / 2, valueY, { align: 'center' })
 
         cardCount++
@@ -311,10 +311,10 @@ async function generatePdf() {
       const slaKeys = first.slaPercentages ? Object.keys(first.slaPercentages) : ['SLA1', 'SLA2']
 
       const head = [
-        'BLOQUE TECH', 
-        'SOLICITUDES', 
+        'BLOQUE TECH',
+        'SOLICITUDES',
         'TIEMPO PROM.',
-        ...slaKeys.map((k) => `${k} (%)`), 
+        ...slaKeys.map((k) => `${k} (%)`),
         'INDICADOR'
       ]
 
@@ -338,7 +338,7 @@ async function generatePdf() {
         head: [head],
         body: tableData,
         theme: 'grid',
-        headStyles: { 
+        headStyles: {
           fillColor: [96, 125, 139],
           textColor: [255, 255, 255],
           fontStyle: 'bold',
@@ -356,7 +356,7 @@ async function generatePdf() {
             const percent = parseFloat(raw)
             let color = [189, 189, 189]
             let text = 'Sin dato'
-            
+
             if (!isNaN(percent)) {
               if (percent >= 80) {
                 color = [76, 175, 80]
@@ -369,17 +369,17 @@ async function generatePdf() {
                 text = 'Incumple'
               }
             }
-            
+
             // Limpiar contenido de la celda primero
             doc.setFillColor(255, 255, 255)
             doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F')
-            
+
             // Dibujar círculo de color
             const x = data.cell.x + 4
             const y = data.cell.y + data.cell.height / 2
             doc.setFillColor(...color)
             doc.circle(x, y, indicatorRadius, 'F')
-            
+
             // Agregar texto al lado (sin mostrar el porcentaje numérico)
             doc.setFontSize(7)
             doc.setFont('helvetica', 'normal')
@@ -419,7 +419,7 @@ async function generatePdf() {
         head: [headIncumplimientos],
         body: tableDataIncumplimientos,
         theme: 'grid',
-        headStyles: { 
+        headStyles: {
           fillColor: [211, 47, 47],
           textColor: [255, 255, 255],
           fontStyle: 'bold',
@@ -451,8 +451,8 @@ async function generatePdf() {
       // Validar que el usuario esté autenticado
       if (!props.generatedBy || props.generatedBy === 0) {
         console.warn('No se puede guardar historial: usuario no autenticado')
-        $q.notify({ 
-          type: 'warning', 
+        $q.notify({
+          type: 'warning',
           message: 'PDF descargado. No se guardó en el historial (usuario no autenticado)',
           icon: 'warning'
         })
@@ -465,7 +465,7 @@ async function generatePdf() {
             tipoSolicitud: props.filtros?.tipoSolicitud || null,
             bloqueTech: props.filtros?.bloqueTech || null
           }
-          
+
           const dto = {
             tipoReporte: props.slaCode || 'SLA', // Usar código SLA corto (ej: "SLA1", "SLA2")
             formato: 'PDF',
@@ -473,13 +473,13 @@ async function generatePdf() {
             generadoPor: props.generatedBy,
             nombreArchivo: props.filename // Nombre del PDF descargado
           }
-          
+
           console.log('[PdfExportButton] Enviando DTO:', dto)
           console.log('[PdfExportButton] Código SLA:', props.slaCode)
-          
-          await api.post('/Reporte', dto)
-          $q.notify({ 
-            type: 'positive', 
+
+          await reporteService.createReporte(dto)
+          $q.notify({
+            type: 'positive',
             message: 'Reporte generado exitosamente',
             icon: 'check_circle',
             position: 'top'
@@ -487,19 +487,19 @@ async function generatePdf() {
         } catch (metaErr) {
           console.error('Error guardando historial del reporte:', metaErr)
           const errorMsg = metaErr?.response?.data?.message || metaErr?.message || 'Error desconocido'
-          $q.notify({ 
-            type: 'warning', 
+          $q.notify({
+            type: 'warning',
             message: `PDF descargado. Error al guardar historial: ${errorMsg}`,
             icon: 'warning'
           })
         }
       }
     } else {
-      $q.notify({ 
-        type: 'positive', 
-        message: 'PDF descargado exitosamente', 
-        icon: 'check_circle', 
-        position: 'top' 
+      $q.notify({
+        type: 'positive',
+        message: 'PDF descargado exitosamente',
+        icon: 'check_circle',
+        position: 'top'
       })
     }
   } catch (error) {

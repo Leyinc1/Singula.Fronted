@@ -3,6 +3,7 @@
  * Incluye: obtener datos SLA, subir archivos Excel, obtener predicciones
  */
 import apiClient from './api'
+import reporteService from './reporteService'
 
 // ==================== DATOS MOCKEADOS ====================
 // Conservados de master porque createManualEntry los utiliza
@@ -192,16 +193,8 @@ export const slaService = {
    */
   async getDashboardDataForReports(filters = {}) {
     try {
-      const params = {}
-
-      // Enviar fechas y tipo de solicitud al backend
-      if (filters.startDate) params.startDate = filters.startDate
-      if (filters.endDate) params.endDate = filters.endDate
-      if (filters.tipoSolicitud) params.tipoSolicitud = filters.tipoSolicitud
-
-      // NO enviar bloqueTech - se filtra en frontend para permitir múltiples selecciones
-      const response = await apiClient.get('/Reporte/dashboard-data', { params })
-      return response.data
+      // Delegar al servicio de reportes
+      return await reporteService.getDashboardData(filters)
     } catch (error) {
       console.error('Error al obtener datos de dashboard para reportes:', error)
       throw new Error(`No se pudieron cargar los datos: ${error.message}`)

@@ -62,8 +62,8 @@
 
 <script setup>
 import { ref, watch } from 'vue'
-import { api } from 'src/boot/axios'
 import { useQuasar } from 'quasar'
+import reporteService from 'src/services/reporteService'
 
 const $q = useQuasar()
 
@@ -102,8 +102,8 @@ function formatDate(val) {
 
 async function fetchReports() {
   try {
-    const resp = await api.get('/Reporte')
-    reports.value = resp.data || []
+    const data = await reporteService.getHistorial()
+    reports.value = data || []
   } catch (err) {
     console.error('Error fetching reports:', err)
     $q.notify({ type: 'negative', message: 'Error al obtener historial de reportes' })
@@ -126,7 +126,7 @@ function download(row) {
 
 async function remove(row) {
   try {
-    await api.delete(`/Reporte/${row.idReporte}`)
+    await reporteService.deleteReporte(row.idReporte)
     $q.notify({ type: 'positive', message: 'Registro eliminado' })
     fetchReports()
   } catch (err) {

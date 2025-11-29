@@ -183,8 +183,8 @@
                   <div class="text-caption text-weight-bold" :style="`color: ${PAGE_STYLES.colors.secondaryText}`">Tiempo Promedio</div>
                   <div class="text-h4 text-weight-bold text-info">{{ tiempoPromedio }}</div>
                   <div class="text-caption" :style="`color: ${PAGE_STYLES.colors.captionText}`">días (de {{ diasUmbral }})</div>
-                  <q-linear-progress 
-                    :value="tiempoPromedio / diasUmbral" 
+                  <q-linear-progress
+                    :value="tiempoPromedio / diasUmbral"
                     :color="tiempoPromedio <= diasUmbral * 0.7 ? 'positive' : tiempoPromedio <= diasUmbral ? 'warning' : 'negative'"
                     size="6px"
                     class="q-mt-xs"
@@ -271,8 +271,8 @@
                       />
                     </td>
                     <td class="text-center">
-                      <q-badge 
-                        color="info" 
+                      <q-badge
+                        color="info"
                         :label="item.tiempoPromedio + ' días'"
                       />
                     </td>
@@ -326,9 +326,9 @@
             Análisis de Incumplimientos - {{ selectedSlaTypeLabel }}
           </div>
         </q-card-section>
-        
+
         <q-separator />
-            
+
             <q-card-section>
               <!-- KPIs de Incumplimientos -->
               <div class="row q-col-gutter-md q-mb-md">
@@ -341,7 +341,7 @@
                     </q-card-section>
                   </q-card>
                 </div>
-                
+
                 <div class="col-12 col-md-4">
                   <q-card flat bordered>
                     <q-card-section class="text-center">
@@ -351,7 +351,7 @@
                     </q-card-section>
                   </q-card>
                 </div>
-                
+
                 <div class="col-12 col-md-4">
                   <q-card flat bordered>
                     <q-card-section class="text-center">
@@ -362,7 +362,7 @@
                   </q-card>
                 </div>
               </div>
-              
+
               <!-- Tabla de incumplimientos por rol -->
               <div class="text-subtitle2 text-weight-bold q-mb-sm">Incumplimientos por Bloque Tech</div>
               <q-markup-table flat bordered dense>
@@ -471,10 +471,10 @@
                 :columns="[
                   { name: 'nombre', label: 'Nombre del Archivo', field: 'rutaArchivo', align: 'left',
                     format: (val) => val ? val.replace(/\.pdf$/i, '') : '-' },
-                  { name: 'fecha', label: 'Fecha de Generación', field: 'fechaGeneracion', align: 'center', 
-                    format: (val) => val ? new Date(val).toLocaleString('es-ES', { 
-                      year: 'numeric', month: 'short', day: 'numeric', 
-                      hour: '2-digit', minute: '2-digit' 
+                  { name: 'fecha', label: 'Fecha de Generación', field: 'fechaGeneracion', align: 'center',
+                    format: (val) => val ? new Date(val).toLocaleString('es-ES', {
+                      year: 'numeric', month: 'short', day: 'numeric',
+                      hour: '2-digit', minute: '2-digit'
                     }) : '-' },
                   { name: 'formato', label: 'Formato', field: 'formato', align: 'center' },
                   { name: 'filtros', label: 'Filtros Aplicados', field: 'filtros', align: 'center' }
@@ -486,10 +486,10 @@
               >
                 <template v-slot:body-cell-filtros="props">
                   <q-td :props="props">
-                    <q-btn 
-                      size="sm" 
-                      flat 
-                      icon="info" 
+                    <q-btn
+                      size="sm"
+                      flat
+                      icon="info"
                       color="primary"
                       @click="showReportDetails(props.row)"
                     >
@@ -597,6 +597,7 @@ import { useAuthStore } from 'src/stores/authStore'
 import PdfExportButton from 'src/components/ui/PdfExportButton.vue'
 import { rolService } from 'src/services/rolService'
 import catalogoService from 'src/services/catalogoService'
+import reporteService from 'src/services/reporteService'
 import { useQuasar } from 'quasar'
 
 const slaStore = useSlaStore()
@@ -610,10 +611,10 @@ const { loading, chartDataByRole, slaData } = storeToRefs(slaStore)
 const CIRCLE_CONFIG = {
   // Tamaño de círculos en la tabla (columna INDICADOR)
   tableSize: '24px',  // Cambia este valor para ajustar el tamaño (ej: '20px', '30px', '1.5rem')
-  
+
   // Tamaño de círculos en la leyenda
   legendSize: '18px', // Cambia este valor para ajustar el tamaño (ej: '15px', '20px', '1rem')
-  
+
   // Colores por porcentaje (usados tanto en tabla como en leyenda)
   colors: {
     cumple: 'positive',     // Verde - Cumple (≥80%)
@@ -627,31 +628,31 @@ const CIRCLE_CONFIG = {
 const PAGE_STYLES = {
   // Altura de los headers de secciones
   headerHeight: '40px',  // Ajusta este valor para cambiar la altura (ej: '40px', '60px')
-  
+
   // Colores de la paleta (tonos gris claro profesionales)
   colors: {
     // Headers de secciones - gris claro
     headerBg: '#f6f6f6',  // Gris claro profesional
     headerText: '#424242',       // Texto oscuro para contraste
-    
+
     // Cards y fondos
     cardBg: '#fafafa',           // Gris muy claro (casi blanco)
     cardBorder: '#e0e0e0',       // Gris claro para bordes
     sectionBg: '#f5f5f5',        // Gris claro para secciones
-    
+
     // KPIs
     kpiCardBg: '#ffffff',        // Blanco para KPIs
     kpiCardBorder: '#e0e0e0',    // Borde gris claro
     kpiCardShadow: '0 1px 3px rgba(0,0,0,0.08)',  // Sombra suave
-    
+
     // Tablas
     tableHeaderBg: '#e0e0e0',    // Gris claro para headers de tabla
     tableHeaderText: '#424242',  // Texto oscuro
     tableRowHover: '#fafafa',    // Hover en filas
-    
+
     // Sección de incumplimientos - gris claro con toque rojo
     alertHeaderBg: '#ffe0e0',  // Gris-rojo muy claro para alertas
-    
+
     // Textos
     primaryText: '#263238',      // Gris muy oscuro (casi negro)
     secondaryText: '#546e7a',    // Gris medio
@@ -670,12 +671,12 @@ const selectedSlaTypeLabel = computed(() => {
   // Buscar el SLA APLICADO (no el seleccionado) para mostrar en KPIs y tabla
   const slaOption = slaTypeOptions.value.find(opt => opt.value === appliedSlaType.value)
   if (!slaOption) return 'SLA'
-  
+
   // Retornar el label completo: "SLA1 - Contratación de nuevo personal"
   return slaOption.label || appliedSlaType.value || 'SLA'
 })
 
-// Calcular fechas por defecto: hoy y 2 meses antes
+// Calcular fechas por defecto: hoy y desde el inicio del año
 const getDefaultDates = () => {
   const today = new Date()
   // Usar fecha local sin conversión a UTC que cambia el día
@@ -683,17 +684,12 @@ const getDefaultDates = () => {
   const month = String(today.getMonth() + 1).padStart(2, '0')
   const day = String(today.getDate()).padStart(2, '0')
   const todayStr = `${year}-${month}-${day}`
-  
-  // Calcular 2 meses antes
-  const twoMonthsAgo = new Date(today)
-  twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2)
-  const yearAgo = twoMonthsAgo.getFullYear()
-  const monthAgo = String(twoMonthsAgo.getMonth() + 1).padStart(2, '0')
-  const dayAgo = String(twoMonthsAgo.getDate()).padStart(2, '0')
-  const twoMonthsAgoStr = `${yearAgo}-${monthAgo}-${dayAgo}`
-  
+
+  // Calcular inicio del año actual
+  const startOfYear = `${year}-01-01`
+
   return {
-    startDate: twoMonthsAgoStr,
+    startDate: startOfYear,
     endDate: todayStr
   }
 }
@@ -773,33 +769,15 @@ const historyLoading = ref(false)
 
 const $q = useQuasar()
 
-const apiUrl = (process.env.VUE_APP_API_URL || 'http://localhost:5192/api')
-
 // ============= HISTORIAL Y DESCARGAS =============
 async function fetchHistory() {
   try {
     historyLoading.value = true
-    const token = localStorage.getItem('token')
-    if (!token) {
-      $q.notify({ type: 'warning', message: 'No se encontró token. Inicia sesión para ver el historial.' })
-      historyList.value = []
-      return
-    }
-    const res = await fetch(`${apiUrl}/Reporte`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {}
-    })
-    if (!res.ok) {
-      const text = await res.text()
-      console.error('Error fetching history', res.status, text)
-      $q.notify({ type: 'negative', message: 'Error al obtener historial de reportes' })
-      historyList.value = []
-      return
-    }
-    const data = await res.json()
+    const data = await reporteService.getHistorial()
     historyList.value = Array.isArray(data) ? data : []
   } catch (err) {
     console.error(err)
-    $q.notify({ type: 'negative', message: 'Error de conexión al obtener historial' })
+    $q.notify({ type: 'negative', message: 'Error al obtener historial de reportes' })
     historyList.value = []
   } finally {
     historyLoading.value = false
@@ -827,7 +805,7 @@ function showReportDetails(report) {
       console.error('Error parseando filtrosJson:', e)
       filtrosObj = { error: 'No se pudieron cargar los filtros' }
     }
-    
+
     // Guardar detalles para mostrar en el diálogo
     selectedReportDetails.value = {
       tipoReporte: report.tipoReporte,
@@ -835,7 +813,7 @@ function showReportDetails(report) {
       fechaGeneracion: report.fechaGeneracion,
       filtros: filtrosObj
     }
-    
+
     // Abrir diálogo
     detailsDialog.value = true
   } catch (err) {
@@ -851,17 +829,17 @@ function showReportDetails(report) {
 const filteredDataBySlaType = computed(() => {
   // Obtener el SLA option APLICADO para mapear a tipo de solicitud
   const slaOption = slaTypeOptions.value.find(opt => opt.value === appliedSlaType.value)
-  
+
   if (!slaOption) return []
-  
+
   // Mapeo idTipoSolicitud → descripción del tipo (lo que espera el backend)
   const tiposSolicitudMap = {
     1: 'Nuevo Personal',
     2: 'Reemplazo'
   }
-  
+
   const tipoSolicitudParaFiltrar = tiposSolicitudMap[slaOption.idTipoSolicitud]
-  
+
   // IMPORTANTE: usar filteredData del store que ya incluye filtros de fecha y bloques tech
   return slaStore.filteredData.filter(s => s.tipo_solicitud === tipoSolicitudParaFiltrar)
 })
@@ -869,14 +847,14 @@ const filteredDataBySlaType = computed(() => {
 // KPI solo para el SLA APLICADO
 const filteredKpiValue = computed(() => {
   if (filteredDataBySlaType.value.length === 0) return 0
-  
+
   // Determinar qué campo de cumplimiento usar según el tipo de solicitud
   const slaOption = slaTypeOptions.value.find(opt => opt.value === appliedSlaType.value)
   if (!slaOption) return 0
-  
+
   // idTipoSolicitud: 1 = Nuevo Personal (cumple_sla1), 2 = Reemplazo (cumple_sla2)
   const fieldName = slaOption.idTipoSolicitud === 1 ? 'cumple_sla1' : 'cumple_sla2'
-  
+
   const cumpleCount = filteredDataBySlaType.value.filter(s => s[fieldName] === true).length
   return Math.round((cumpleCount / filteredDataBySlaType.value.length) * 100)
 })
@@ -887,7 +865,7 @@ const filteredDataCount = computed(() => filteredDataBySlaType.value.length)
 const diasUmbral = computed(() => {
   const slaOption = slaTypeOptions.value.find(opt => opt.value === appliedSlaType.value)
   if (!slaOption) return 35
-  
+
   // SLA1 = 35 días (id 1), SLA2 = 20 días (id 2)
   return slaOption.idTipoSolicitud === 1 ? 35 : 20
 })
@@ -895,11 +873,11 @@ const diasUmbral = computed(() => {
 // Mapeo de código SLA a descripción del tipo (para acceder a slaPercentages)
 const tiempoPromedio = computed(() => {
   if (filteredDataBySlaType.value.length === 0) return 0
-  
+
   const total = filteredDataBySlaType.value.reduce((sum, s) => {
     return sum + (s.num_dias_sla || 0)
   }, 0)
-  
+
   return Math.round(total / filteredDataBySlaType.value.length)
 })
 
@@ -907,13 +885,13 @@ const tiempoPromedio = computed(() => {
 const appliedSlaTypeDescripcion = computed(() => {
   const slaOption = slaTypeOptions.value.find(opt => opt.value === appliedSlaType.value)
   if (!slaOption) return null
-  
+
   // Mapeo idTipoSolicitud → descripción
   const tiposSolicitudMap = {
     1: 'Nuevo Personal',
     2: 'Reemplazo'
   }
-  
+
   return tiposSolicitudMap[slaOption.idTipoSolicitud]
 })
 
@@ -921,7 +899,7 @@ const appliedSlaTypeDescripcion = computed(() => {
 const totalIncumplimientos = computed(() => {
   const slaOption = slaTypeOptions.value.find(opt => opt.value === appliedSlaType.value)
   if (!slaOption) return 0
-  
+
   const fieldName = slaOption.idTipoSolicitud === 1 ? 'cumple_sla1' : 'cumple_sla2'
   return filteredDataBySlaType.value.filter(s => s[fieldName] === false).length
 })
@@ -937,7 +915,7 @@ const solicitudesEnAlerta = computed(() => {
   const umbral = diasUmbral.value
   const limiteInferior = Math.floor(umbral * 0.7)
   const limiteSuperior = Math.floor(umbral * 0.79)
-  
+
   return filteredDataBySlaType.value.filter(s => {
     const dias = s.num_dias_sla || 0
     return dias >= limiteInferior && dias <= limiteSuperior
@@ -948,18 +926,18 @@ const solicitudesEnAlerta = computed(() => {
 const retrasoPromedio = computed(() => {
   const slaOption = slaTypeOptions.value.find(opt => opt.value === appliedSlaType.value)
   if (!slaOption) return 0
-  
+
   const umbral = diasUmbral.value
   const fieldName = slaOption.idTipoSolicitud === 1 ? 'cumple_sla1' : 'cumple_sla2'
-  
+
   const incumplimientos = filteredDataBySlaType.value.filter(s => s[fieldName] === false)
   if (incumplimientos.length === 0) return 0
-  
+
   const totalRetraso = incumplimientos.reduce((sum, s) => {
     const retraso = (s.num_dias_sla || 0) - umbral
     return sum + (retraso > 0 ? retraso : 0)
   }, 0)
-  
+
   return Math.round(totalRetraso / incumplimientos.length)
 })
 
@@ -967,13 +945,13 @@ const retrasoPromedio = computed(() => {
 const retrasoMaximo = computed(() => {
   const slaOption = slaTypeOptions.value.find(opt => opt.value === appliedSlaType.value)
   if (!slaOption) return 0
-  
+
   const umbral = diasUmbral.value
   const fieldName = slaOption.idTipoSolicitud === 1 ? 'cumple_sla1' : 'cumple_sla2'
-  
+
   const incumplimientos = filteredDataBySlaType.value.filter(s => s[fieldName] === false)
   if (incumplimientos.length === 0) return 0
-  
+
   const retrasos = incumplimientos.map(s => (s.num_dias_sla || 0) - umbral)
   return Math.max(...retrasos, 0)
 })
@@ -982,34 +960,34 @@ const retrasoMaximo = computed(() => {
 const incumplimientosPorRol = computed(() => {
   const slaOption = slaTypeOptions.value.find(opt => opt.value === appliedSlaType.value)
   if (!slaOption) return []
-  
+
   const fieldName = slaOption.idTipoSolicitud === 1 ? 'cumple_sla1' : 'cumple_sla2'
   const umbral = diasUmbral.value
   const dataFiltered = slaStore.filteredData || []
-  
+
   // Obtener roles únicos
   const roles = [...new Set(dataFiltered.map(s => s.bloque_tech))].filter(Boolean)
-  
+
   return roles.map(role => {
-    const solicitudesRol = dataFiltered.filter(s => 
-      s.bloque_tech === role && 
+    const solicitudesRol = dataFiltered.filter(s =>
+      s.bloque_tech === role &&
       s.tipo_solicitud === appliedSlaTypeDescripcion.value
     )
-    
+
     const incumplimientos = solicitudesRol.filter(s => s[fieldName] === false)
     const numIncumplimientos = incumplimientos.length
-    
-    const porcentajeIncumplimiento = solicitudesRol.length > 0 
+
+    const porcentajeIncumplimiento = solicitudesRol.length > 0
       ? Math.round((numIncumplimientos / solicitudesRol.length) * 100)
       : 0
-    
+
     const retrasoPromedio = numIncumplimientos > 0
       ? Math.round(incumplimientos.reduce((sum, s) => {
           const retraso = (s.num_dias_sla || 0) - umbral
           return sum + (retraso > 0 ? retraso : 0)
         }, 0) / numIncumplimientos)
       : 0
-    
+
     return {
       role,
       numIncumplimientos,
@@ -1023,28 +1001,28 @@ const incumplimientosPorRol = computed(() => {
 // Tabla filtrada: solo roles del SLA seleccionado (CON TIEMPO PROMEDIO)
 const filteredChartDataByRole = computed(() => {
   const roles = chartDataByRole.value || []
-  
+
   // Usar filteredData del store que ya tiene las fechas aplicadas
   const dataFiltered = slaStore.filteredData || []
-  
+
   return roles.map(item => {
     const role = item.role
-    
+
     // Filtrar solicitudes por rol y tipo
-    const solicitudesRol = dataFiltered.filter(s => 
-      s.bloque_tech === role && 
+    const solicitudesRol = dataFiltered.filter(s =>
+      s.bloque_tech === role &&
       s.tipo_solicitud === appliedSlaTypeDescripcion.value
     )
-    
+
     const numResources = solicitudesRol.length
-    
+
     // CALCULAR TIEMPO PROMEDIO POR ROL
-    const tiempoPromedio = numResources > 0 
+    const tiempoPromedio = numResources > 0
       ? Math.round(solicitudesRol.reduce((sum, s) => sum + (s.num_dias_sla || 0), 0) / numResources)
       : 0
-    
-    return { 
-      ...item, 
+
+    return {
+      ...item,
       numResources,
       tiempoPromedio
     }
@@ -1084,10 +1062,10 @@ const authStore = useAuthStore()
 const generatedBy = computed(() => {
   const usr = authStore.user
   if (!usr) return 0
-  
+
   // Intentar múltiples propiedades posibles
   const userId = usr.id || usr.idUsuario || usr.IdUsuario || usr.userId || usr.UserId || 0
-  
+
   console.log('Generated By - Usuario:', usr, 'ID extraído:', userId)
   return userId
 })
@@ -1100,7 +1078,7 @@ const bloqueTechMultiOptions = computed(() => {
   const fromSla = slaData.value.map((r) => r.bloque_tech || r.bloqueTech).filter(Boolean)
   const roles = [...new Set([...fromApi, ...fromSla])]
   roles.sort((a, b) => a.localeCompare(b))
-  
+
   return [
     { label: 'Todos', value: 'TODOS' }, // Valor especial para 'Todos'
     ...roles.map((role) => ({ label: role, value: role }))
@@ -1113,7 +1091,7 @@ function handleBloquesTechChange(newValue) {
     selectedBloquesTech.value = []
     return
   }
-  
+
   // Si se selecciona 'Todos', limpiar otros y dejar solo 'Todos'
   if (newValue.includes('TODOS')) {
     selectedBloquesTech.value = ['TODOS']
@@ -1146,7 +1124,7 @@ async function fetchCatalogData() {
         descripcion: sla.descripcion,
         idTipoSolicitud: sla.idTipoSolicitud
       }))
-    
+
     // Si hay al menos un SLA, seleccionar el primero por defecto
     if (slaTypeOptions.value.length > 0) {
       selectedSlaType.value = slaTypeOptions.value[0].value // Ahora es "SLA1" en vez de "Nuevo Personal"
@@ -1173,13 +1151,13 @@ function applyFilters() {
   // COPIAR filtros temporales a filtros aplicados
   reportFilters.value.startDate = tempFilters.value.startDate
   reportFilters.value.endDate = tempFilters.value.endDate
-  
+
   // APLICAR el SLA seleccionado (copiar de selectedSlaType a appliedSlaType)
   appliedSlaType.value = selectedSlaType.value
-  
+
   // Convertir codigoSla (SLA1) a descripción del tipo de solicitud para el backend
   const slaOption = slaTypeOptions.value.find(opt => opt.value === selectedSlaType.value)
-  
+
   // El backend espera la descripción del tipo (por ejemplo, "Nuevo Personal")
   // Obtenerla del mapping idTipoSolicitud
   let tipoSolicitudParaBackend = null
@@ -1192,7 +1170,7 @@ function applyFilters() {
     }
     tipoSolicitudParaBackend = tiposSolicitudMap[slaOption.idTipoSolicitud]
   }
-  
+
   // Convertir selectedBloquesTech a formato adecuado
   // El filtro de bloques tech se aplicará en el FRONTEND (store)
   // NO se envía al backend para permitir selección múltiple
@@ -1202,11 +1180,11 @@ function applyFilters() {
     bloqueTechFiltro = selectedBloquesTech.value
   }
   // Si está vacío o es 'TODOS', dejar null (mostrar todos)
-  
+
   // Actualizar filtros del store (incluye fechas, tipo solicitud y bloques tech)
   reportFilters.value.tipoSolicitud = tipoSolicitudParaBackend
   reportFilters.value.bloqueTech = bloqueTechFiltro
-  
+
   // IMPORTANTE: Pasar filtros al store
   // El store aplicará:
   // - Filtros de backend: fechas + tipo solicitud (para traer datos de BD)
@@ -1217,7 +1195,7 @@ function applyFilters() {
     tipoSolicitud: tipoSolicitudParaBackend,
     bloqueTech: bloqueTechFiltro, // Array o null
   })
-  
+
   // Guardar estado de filtros en el store para persistir al navegar
   slaStore.saveReportFilters({
     selectedSlaType: selectedSlaType.value,
@@ -1226,7 +1204,7 @@ function applyFilters() {
     endDate: reportFilters.value.endDate,
     selectedBloquesTech: [...selectedBloquesTech.value]
   })
-  
+
   // Usar el nuevo método específico para reportes
   slaStore.fetchDashboardDataForReports({
     startDate: reportFilters.value.startDate,
@@ -1237,13 +1215,13 @@ function applyFilters() {
 
 function clearFilters() {
   const defaultDates = getDefaultDates()
-  
+
   // Resetear filtros temporales
   tempFilters.value = {
     startDate: defaultDates.startDate,
     endDate: defaultDates.endDate,
   }
-  
+
   // Resetear filtros aplicados
   reportFilters.value = {
     startDate: defaultDates.startDate,
@@ -1272,10 +1250,10 @@ function generateFilename() {
   const hours = String(now.getHours()).padStart(2, '0')
   const minutes = String(now.getMinutes()).padStart(2, '0')
   const dateStr = `${year}-${month}-${day}_${hours}${minutes}`
-  
+
   // Obtener el tipo de SLA (ejemplo: "Nuevo Personal" -> "SLA1")
   const slaCode = selectedSlaType.value || 'SLA'
-  
+
   // Formato: Reporte Indicadores SLA1_2025-11-27_1039.pdf
   return `Reporte Indicadores ${slaCode}_${dateStr}.pdf`
 }
@@ -1299,7 +1277,7 @@ function getKpiColor(percentage) {
 onMounted(async () => {
   // 1. Cargar catálogos dinámicos primero (SLA types y prioridades)
   await fetchCatalogData()
-  
+
   // 2. Cargar roles usando rolService (usa api client y token)
   try {
     const data = await rolService.getRoles()
@@ -1313,19 +1291,19 @@ onMounted(async () => {
   if (slaStore.isReportsInitialized) {
     // YA FUE INICIALIZADA: restaurar filtros guardados
     const saved = slaStore.appliedReportFilters
-    
+
     if (saved.selectedSlaType) {
       selectedSlaType.value = saved.selectedSlaType
       appliedSlaType.value = saved.appliedSlaType
-      
+
       // Restaurar AMBOS: temporales y aplicados
       tempFilters.value.startDate = saved.startDate
       tempFilters.value.endDate = saved.endDate
       reportFilters.value.startDate = saved.startDate
       reportFilters.value.endDate = saved.endDate
-      
+
       selectedBloquesTech.value = saved.selectedBloquesTech || ['TODOS']
-      
+
       // Obtener tipo de solicitud para backend
       const slaOption = slaTypeOptions.value.find(opt => opt.value === saved.appliedSlaType)
       let tipoSolicitud = null
@@ -1333,7 +1311,7 @@ onMounted(async () => {
         const tiposSolicitudMap = { 1: 'Nuevo Personal', 2: 'Reemplazo' }
         tipoSolicitud = tiposSolicitudMap[slaOption.idTipoSolicitud]
       }
-      
+
       // Refrescar datos con el nuevo método
       await slaStore.fetchDashboardDataForReports({
         startDate: saved.startDate,

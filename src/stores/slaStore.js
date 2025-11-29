@@ -316,6 +316,7 @@ export const useSlaStore = defineStore('sla', () => {
         return {
           id_solicitud: (r.id ?? r.idSolicitud ?? r.id_solicitud ?? r.Id ?? null),
           area: (r.area ?? r.Area ?? null),
+          bloque_tech: (r.bloque_tech ?? r.area ?? r.Area ?? null), // Mapear area a bloque_tech también
           tipo_solicitud: (r.tipoSolicitud ?? r.TipoSolicitud ?? r.tipo_solicitud ?? null),
           prioridad: (r.prioridad ?? r.Prioridad ?? null),
           fecha_solicitud: (r.fechaSolicitud ?? r.FechaSolicitud ?? r.fecha_solicitud ?? null),
