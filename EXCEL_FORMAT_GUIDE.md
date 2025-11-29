@@ -1,26 +1,28 @@
 # Ejemplo de Estructura del Archivo Excel
 
-## Columnas Requeridas (ACTUALIZADO - 28/Nov/2025)
+## Columnas Requeridas (ACTUALIZADO - 29/Nov/2025)
 
-El archivo Excel debe contener exactamente estas columnas (pueden estar en cualquier orden):
+El archivo Excel debe contener al menos las columnas obligatorias. Las demás son opcionales:
 
-| AREA                   | Tipo de Solicitud | Prioridad | Fecha Solicitud | Fecha de Ingreso | Nombre Personal | Eficacia  | Observaciones         |
-| ---------------------- | ----------------- | --------- | --------------- | ---------------- | --------------- | --------- | --------------------- |
-| Desarrollo Backend     | Nuevo Personal    | Alta      | 15/01/2025      | 10/02/2025       | Juan Pérez      | Eficaz    | Contratación exitosa  |
-| Desarrollo Frontend    | Nuevo Personal    | Media     | 20/01/2025      | 05/03/2025       | María García    | No Eficaz | Requiere capacitación |
-| QA                     | Reemplazo         | Crítica   | 01/02/2025      | 15/02/2025       | Carlos López    | Eficaz    |                       |
-| Infraestructura        | Nuevo Personal    | Baja      | 10/02/2025      | 10/03/2025       |                 | Eficaz    |                       |
-| Desarrollo Backend     | Reemplazo         | Alta      | 15/02/2025      | 01/03/2025       | Ana Martínez    | Eficaz    | Excelente desempeño   |
-| Analytics              | Nuevo Personal    | Media     | 01/03/2025      | 25/03/2025       | Pedro Sánchez   | Eficaz    |                       |
+| AREA                   | Fecha Solicitud | Tipo de Solicitud | Prioridad | Fecha de Ingreso | Nombre Personal | Observaciones         |
+| ---------------------- | --------------- | ----------------- | --------- | ---------------- | --------------- | --------------------- |
+| Desarrollo Backend     | 15/01/2025      | Nuevo Personal    | Alta      | 10/02/2025       | Juan Pérez      | Contratación exitosa  |
+| Desarrollo Frontend    | 20/01/2025      | Nuevo Personal    | Media     | 05/03/2025       | María García    | Requiere capacitación |
+| QA                     | 01/02/2025      | Reemplazo         | Crítica   | 15/02/2025       | Carlos López    |                       |
+| Infraestructura        | 10/02/2025      | Nuevo Personal    | Baja      | 10/03/2025       |                 |                       |
+| Desarrollo Backend     | 15/02/2025      | Reemplazo         | Alta      | 01/03/2025       | Ana Martínez    | Excelente desempeño   |
+| Analytics              | 01/03/2025      | Nuevo Personal    | Media     | 25/03/2025       | Pedro Sánchez   |                       |
 
 ## Reglas de Validación
 
 ### 1. AREA ✅ OBLIGATORIO
 
 - **Tipo**: Texto
-- **Obligatorio**: Sí
+- **Obligatorio**: ✅ Sí
 - **Descripción**: Área o departamento al que pertenece la solicitud
 - **Ejemplos válidos**:
+  - "Tecnología"
+  - "Recursos Humanos"
   - "Desarrollo Backend"
   - "Desarrollo Frontend"
   - "QA"
@@ -33,57 +35,64 @@ El archivo Excel debe contener exactamente estas columnas (pueden estar en cualq
   - "Datos"
   - Cualquier área registrada en el sistema
 
-### 2. Tipo de Solicitud ✅ OBLIGATORIO
+### 2. Fecha Solicitud ✅ OBLIGATORIO
+
+- **Tipo**: Fecha
+- **Obligatorio**: ✅ Sí
+- **Formatos aceptados**:
+  - `DD/MM/YYYY` (ejemplo: `15/01/2025`)
+  - `YYYY-MM-DD` (ejemplo: `2025-01-15`)
+  - Fecha de Excel (se convierte automáticamente)
+- **Descripción**: Fecha en la que se realizó la solicitud de contratación
+
+### 3. Tipo de Solicitud ✅ OBLIGATORIO
 
 - **Tipo**: Texto
-- **Obligatorio**: Sí (si no se especifica, el sistema puede asignar un valor por defecto)
+- **Obligatorio**: ✅ Sí
 - **Valores permitidos**:
   - "Nuevo Personal"
   - "Reemplazo"
+  - "Transferencia"
+  - "Promoción"
   - O cualquier tipo registrado en el sistema
 - **Nota**: El sistema buscará coincidencias con los tipos de SLA configurados
 
-### 3. Prioridad ⚪ OPCIONAL
+### 4. Prioridad ✅ OBLIGATORIO
 
 - **Tipo**: Texto
-- **Obligatorio**: No (si no se especifica, se asigna "MEDIA" por defecto)
+- **Obligatorio**: ✅ Sí
 - **Valores permitidos**:
   - "Crítica" o "CRITICA" - Urgencia máxima, atención inmediata
   - "Alta" o "ALTA" - Importante, atender pronto
-  - "Media" o "MEDIA" - Prioridad estándar (por defecto)
+  - "Media" o "MEDIA" - Prioridad estándar
   - "Baja" o "BAJA" - Puede esperar, no urgente
 - **Nota**: El sistema normaliza automáticamente las prioridades
 
-### 4. Fecha Solicitud ✅ OBLIGATORIO
+### 5. Fecha de Ingreso ✅ OBLIGATORIO
 
 - **Tipo**: Fecha
-- **Obligatorio**: Sí
+- **Obligatorio**: ✅ Sí
 - **Formatos aceptados**:
-  - DD/MM/YYYY (ejemplo: 15/01/2025)
-  - YYYY-MM-DD (ejemplo: 2025-01-15)
-  - DD-MM-YYYY (ejemplo: 15-01-2025)
-  - MM/DD/YYYY (ejemplo: 01/15/2025)
+  - `DD/MM/YYYY` (ejemplo: `10/02/2025`)
+  - `YYYY-MM-DD` (ejemplo: `2025-02-10`)
+  - `DD-MM-YYYY` (ejemplo: `10-02-2025`)
+  - `MM/DD/YYYY` (ejemplo: `02/10/2025`)
   - Formato de fecha de Excel (automático)
-- **Nota**: El sistema reconoce múltiples formatos de fecha automáticamente
-
-### 5. Fecha de Ingreso ⚪ OPCIONAL
-
-- **Tipo**: Fecha
-- **Obligatorio**: No (puede quedar vacío si aún no se ha completado el proceso)
-- **Formatos aceptados**:
-  - DD/MM/YYYY (ejemplo: 10/02/2025)
-  - YYYY-MM-DD (ejemplo: 2025-02-10)
-  - DD-MM-YYYY (ejemplo: 10-02-2025)
-  - MM/DD/YYYY (ejemplo: 02/10/2025)
-  - Formato de fecha de Excel (automático)
-- **Nota**: Si se especifica, debe ser igual o posterior a la Fecha Solicitud
+- **Nota**: Debe ser igual o posterior a la Fecha Solicitud
 
 ### 6. Nombre Personal ⚪ OPCIONAL
 
 - **Tipo**: Texto
-- **Obligatorio**: No
+- **Obligatorio**: ⚪ No
 - **Descripción**: Nombre completo de la persona contratada
 - **Ejemplo**: "Juan Pérez González"
+
+### 7. Observaciones ⚪ OPCIONAL
+
+- **Tipo**: Texto
+- **Obligatorio**: ⚪ No
+- **Descripción**: Notas, comentarios o detalles adicionales sobre la solicitud
+- **Ejemplo**: "Requiere certificación en AWS", "Excelente desempeño en entrevistas"
 
 ### 7. Eficacia ⚪ OPCIONAL
 

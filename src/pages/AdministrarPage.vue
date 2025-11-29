@@ -46,20 +46,35 @@
                   <q-icon name="info" color="black" />
                 </template>
                 <div class="text-body2">
-                  El archivo Excel debe contener las siguientes columnas:
-                  <ul class="q-my-sm">
-                    <li>
-                      <strong>AREA</strong> ✅ OBLIGATORIO: Nombre del área o departamento (ej: Desarrollo Backend, QA, Infraestructura)
-                    </li>
-                    <li><strong>Fecha Solicitud</strong> ✅ OBLIGATORIO: Fecha de la solicitud (DD/MM/YYYY o YYYY-MM-DD)</li>
-                    <li><strong>Tipo de Solicitud</strong> ⚪ Opcional: Nuevo Personal o Reemplazo (por defecto se asigna automáticamente)</li>
-                    <li><strong>Prioridad</strong> ⚪ Opcional: Crítica, Alta, Media o Baja (por defecto: Media)</li>
-                    <li><strong>Fecha de Ingreso</strong> ⚪ Opcional: Fecha de ingreso (DD/MM/YYYY o YYYY-MM-DD)</li>
-                    <li><strong>Nombre Personal</strong> ⚪ Opcional: Nombre de la persona</li>
-                    <li><strong>Observaciones</strong> ⚪ Opcional: Comentarios adicionales</li>
-                  </ul>
-                  <div class="q-mt-sm text-weight-bold">
-                    📥 Descarga la plantilla: <a href="/plantilla_carga_sla.xlsx" download class="text-primary">plantilla_carga_sla.xlsx</a>
+                  <div class="text-weight-bold q-mb-sm">📋 Formato del archivo Excel:</div>
+
+                  <div class="q-mb-sm">
+                    <strong>Campos OBLIGATORIOS:</strong>
+                    <ul class="q-my-xs q-pl-md">
+                      <li><strong>AREA</strong>: Nombre del área o departamento</li>
+                      <li><strong>Fecha Solicitud</strong>: Fecha de la solicitud (DD/MM/YYYY o YYYY-MM-DD)</li>
+                      <li><strong>Tipo de Solicitud</strong>: Nuevo Personal, Reemplazo, Transferencia o Promoción</li>
+                      <li><strong>Prioridad</strong>: Crítica, Alta, Media o Baja</li>
+                      <li><strong>Fecha de Ingreso</strong>: Fecha de ingreso del personal (DD/MM/YYYY o YYYY-MM-DD)</li>
+                    </ul>
+                  </div>
+
+                  <div class="q-mb-sm">
+                    <strong>Campos OPCIONALES:</strong>
+                    <ul class="q-my-xs q-pl-md">
+                      <li><strong>Nombre Personal</strong>: Nombre completo de la persona</li>
+                      <li><strong>Observaciones</strong>: Comentarios o notas adicionales</li>
+                    </ul>
+                  </div>
+
+                  <div class="q-mt-md q-pa-sm bg-grey-2 rounded-borders">
+                    <div class="text-caption text-grey-8">
+                      💡 <strong>Nota:</strong> Los 5 primeros campos son obligatorios y deben tener valores. Solo Nombre Personal y Observaciones son opcionales.
+                    </div>
+                  </div>
+
+                  <div class="q-mt-md text-weight-bold">
+                    📥 Descarga la plantilla de ejemplo: <a href="/plantilla_carga_sla.xlsx" download class="text-primary">plantilla_carga_sla.xlsx</a>
                   </div>
                 </div>
               </q-banner>
